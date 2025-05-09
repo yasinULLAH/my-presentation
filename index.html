@@ -1,0 +1,2072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PathPresenter Interactive</title>
+    <meta name="author" content="Yasin Ullah">
+    <meta name="description" content="Offline-first presentation tool with clickable hotspots and branching paths.">
+    <style>
+        :root {
+            --primary-color: #0D0D2B; /* Deep Space Blue */
+            --secondary-color: #2A2A4D; /* Darker Purple Blue */
+            --accent-color: #00CFE8; /* Bright Cyan */
+            --highlight-color: #FF4081; /* Neon Pink */
+            --text-color: #E0E0E0; /* Light Grey */
+            --text-dark-color: #333;
+            --bg-light-color: #f4f4f4;
+            --border-color: #4A4A6A; /* Muted Purple Blue */
+            --font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            --font-futuristic: 'Orbitron', sans-serif; /* Optional for titles */
+            --slide-bg: #1A1A3A; /* Dark Slide Background */
+            --input-bg: #252540;
+            --input-border: var(--border-color);
+            --button-bg: var(--accent-color);
+            --button-text: var(--primary-color);
+            --button-hover-bg: #00A8B8;
+            --danger-color: #FF3B30;
+
+            --transition-speed: 0.3s;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--primary-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        /* --- Global UI Elements --- */
+        button, input[type="button"], input[type="submit"] {
+            background-color: var(--button-bg);
+            color: var(--button-text);
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color var(--transition-speed) ease;
+        }
+        button:hover, input[type="button"]:hover, input[type="submit"]:hover {
+            background-color: var(--button-hover-bg);
+        }
+        button.secondary {
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+            border: 1px solid var(--accent-color);
+        }
+        button.secondary:hover {
+            background-color: var(--border-color);
+        }
+        button.danger {
+            background-color: var(--danger-color);
+            color: white;
+        }
+        button.danger:hover {
+            background-color: #D93025;
+        }
+
+        input[type="text"], input[type="number"], textarea, select {
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            border: 1px solid var(--input-border);
+            padding: 8px 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            width: 100%;
+        }
+        textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        /* --- Header --- */
+        .app-header {
+            background-color: var(--secondary-color);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--accent-color);
+        }
+        .app-header h1 {
+            font-family: var(--font-futuristic), var(--font-family);
+            color: var(--accent-color);
+            font-size: 1.8em;
+            cursor: pointer;
+        }
+        .app-header .controls button { margin-left: 10px; }
+
+        /* --- Presentation List View --- */
+        #presentation-list-view {
+            padding: 20px;
+            text-align: center;
+        }
+        #presentation-list-view h2 {
+            color: var(--accent-color);
+            margin-bottom: 20px;
+        }
+        .presentation-item {
+            background-color: var(--secondary-color);
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid var(--border-color);
+        }
+        .presentation-item:hover {
+            border-color: var(--accent-color);
+        }
+        .presentation-item span { cursor: pointer; flex-grow: 1; text-align: left;}
+        .presentation-item span:hover { color: var(--highlight-color); }
+
+        /* --- Editor View --- */
+        #editor-view {
+            display: flex;
+            flex-grow: 1;
+            overflow: hidden; /* Important for layout */
+        }
+
+        #toolbar {
+            background-color: var(--secondary-color);
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            border-right: 1px solid var(--border-color);
+            width: 200px; /* Fixed width for toolbar */
+            overflow-y: auto;
+        }
+        #toolbar h3 {
+            color: var(--accent-color);
+            margin-bottom: 5px;
+            font-size: 0.9em;
+            text-transform: uppercase;
+        }
+        #toolbar button { width: 100%; font-size: 0.9em; padding: 8px;}
+
+        #slide-list-panel {
+            width: 200px;
+            background-color: var(--primary-color);
+            padding: 10px;
+            overflow-y: auto;
+            border-right: 1px solid var(--border-color);
+        }
+        .slide-thumbnail {
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+            padding: 5px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            font-size: 0.9em;
+            height: 80px; /* Fixed height for consistency */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            overflow: hidden;
+            position: relative;
+        }
+        .slide-thumbnail.active {
+            border-color: var(--accent-color);
+            font-weight: bold;
+        }
+        .slide-thumbnail .delete-slide-btn {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: var(--danger-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 10px;
+            line-height: 18px;
+            text-align: center;
+            cursor: pointer;
+            opacity: 0.7;
+        }
+        .slide-thumbnail:hover .delete-slide-btn { opacity: 1; }
+
+
+        #slide-editor-panel {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #101025; /* Slightly lighter than primary for contrast */
+            padding: 20px;
+            overflow: auto; /* If slide is larger than panel */
+            user-select: none; /* Prevent text selection during drag on panel */
+        }
+
+        #slide-canvas-container { /* For aspect ratio and centering */
+            width: 80%; /* Adjust as needed */
+            max-width: 1000px;
+            aspect-ratio: 16 / 9;
+            background-color: var(--slide-bg);
+            box-shadow: 0 0 20px rgba(0, 207, 232, 0.3);
+            position: relative; /* For absolute positioning of elements */
+            overflow: hidden; /* Clip elements outside slide bounds */
+            border: 1px solid var(--border-color);
+        }
+        #slide-canvas {
+            width: 100%;
+            height: 100%;
+            position: relative; /* For elements */
+            user-select: none; /* Prevent text selection during drag on canvas */
+        }
+
+        .slide-element {
+            position: absolute;
+            cursor: grab; /* Default cursor for draggable items */
+            border: 1px dashed transparent; /* Invisible border for selection indication */
+            user-select: none; /* Prevent text selection within the element during drag */
+        }
+        .slide-element:active {
+            cursor: grabbing; /* Cursor when dragging */
+        }
+        .slide-element.selected {
+            border: 1px dashed var(--accent-color);
+            outline: 2px solid var(--accent-color); /* For better visibility */
+        }
+        .slide-element.text-element {
+            padding: 5px;
+            white-space: pre-wrap; /* Respect newlines and spaces */
+            word-break: break-word;
+        }
+        .slide-element.image-element img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Or 'cover' or 'fill' based on preference */
+            pointer-events: none; /* Prevent image from interfering with drag */
+        }
+        .slide-element.shape-element svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+            pointer-events: none; /* Prevent svg from interfering with drag */
+        }
+        .hotspot-overlay {
+            position: absolute;
+            border: 2px dashed var(--highlight-color);
+            background-color: rgba(255, 64, 129, 0.2);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--highlight-color);
+            font-size: 0.8em;
+            pointer-events: auto; /* Make sure it's clickable in editor */
+        }
+        .hotspot-overlay.drawing {
+            background-color: rgba(0, 207, 232, 0.3);
+            border-color: var(--accent-color);
+        }
+
+
+        #properties-panel {
+            width: 280px;
+            background-color: var(--secondary-color);
+            padding: 15px;
+            overflow-y: auto;
+            border-left: 1px solid var(--border-color);
+        }
+        #properties-panel h3 {
+            color: var(--accent-color);
+            margin-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 5px;
+        }
+        .property-group { margin-bottom: 15px; }
+        .property-group label {
+            display: block;
+            font-size: 0.9em;
+            margin-bottom: 3px;
+            color: var(--text-color);
+        }
+        .property-group input[type="color"] {
+            width: 100%;
+            height: 30px;
+            padding: 0;
+            border: none;
+        }
+
+        #speaker-notes-panel {
+            height: 150px; /* Fixed height for speaker notes */
+            background-color: var(--primary-color);
+            padding: 10px;
+            border-top: 1px solid var(--border-color);
+        }
+        #speaker-notes-panel textarea {
+            width: 100%;
+            height: calc(100% - 30px); /* Adjust for label */
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            border: 1px solid var(--input-border);
+        }
+
+        /* --- Presenter View --- */
+        #presenter-view {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            overflow: hidden;
+        }
+        #presenter-slide-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background-color: var(--slide-bg); /* Default, can be overridden by slide */
+        }
+        #presenter-slide-content {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-origin: top left; /* For scaling */
+        }
+        .presenter-element {
+            position: absolute;
+        }
+        .presenter-element.text-element { white-space: pre-wrap; word-break: break-word; }
+        .presenter-element.image-element img { width: 100%; height: 100%; object-fit: contain; }
+        .presenter-element.shape-element svg { width: 100%; height: 100%; display: block; }
+        .presenter-hotspot {
+            position: absolute;
+            cursor: pointer;
+            /* background-color: rgba(0,255,0,0.1); */ /* For debugging hotspots */
+        }
+
+        /* Transitions */
+        .slide-transition-fade {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .slide-transition-slide-left {
+            animation: slideInFromRight 0.5s ease-in-out;
+        }
+        @keyframes slideInFromRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0%); opacity: 1; }
+        }
+        .slide-transition-slide-right {
+            animation: slideInFromLeft 0.5s ease-in-out;
+        }
+        @keyframes slideInFromLeft {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0%); opacity: 1; }
+        }
+
+
+        /* --- Modal --- */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1001;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.7);
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: var(--secondary-color);
+            padding: 30px;
+            border: 1px solid var(--accent-color);
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 5px 15px rgba(0, 207, 232, 0.2);
+        }
+        .modal-content h2 { color: var(--accent-color); margin-bottom: 15px; }
+        .modal-buttons { margin-top: 20px; text-align: right; }
+        .modal-buttons button { margin-left: 10px; }
+
+        /* Helper classes */
+        .hidden { display: none !important; }
+        .text-center { text-align: center; }
+        .mt-1 { margin-top: 10px; }
+        .mt-2 { margin-top: 20px; }
+
+        /* For drawing hotspots */
+        .crosshair-cursor { cursor: crosshair; }
+
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1 id="appName">PathPresenter Interactive</h1>
+            <div class="controls">
+                <button id="savePresentationBtn" class="hidden">Save</button>
+                <button id="exportPresentationBtn" class="hidden">Export JSON</button>
+                <button id="presentBtn" class="hidden">Present</button>
+                <button id="closePresentationBtn" class="hidden secondary">Close Presentation</button>
+            </div>
+        </header>
+
+        <main id="main-content" style="flex-grow: 1; display: flex; flex-direction: column; overflow: hidden;">
+            <!-- Presentation List View -->
+            <div id="presentation-list-view">
+                <h2>My Presentations</h2>
+                <div class="mt-2">
+                    <input type="text" id="newPresentationName" placeholder="New Presentation Name">
+                    <button id="createPresentationBtn">Create New Presentation</button>
+                </div>
+                <div class="mt-2">
+                    <label for="importFile" class="button secondary">Import JSON</label>
+                    <input type="file" id="importFile" accept=".json" class="hidden">
+                </div>
+                <div id="presentationsList" class="mt-2">
+                    <!-- Presentation items will be populated here -->
+                </div>
+            </div>
+
+            <!-- Editor View -->
+            <div id="editor-view" class="hidden" style="flex-grow: 1; display: flex; overflow: hidden;">
+                <div id="toolbar">
+                    <h3>Add Element</h3>
+                    <button id="addTextBtn">Add Text</button>
+                    <button id="addImageBtn">Add Image</button>
+                    <input type="file" id="imageUpload" accept="image/*" class="hidden">
+                    <button id="addShapeBtn">Add Rectangle</button> <!-- Basic shape -->
+                    <h3 class="mt-2">Hotspots</h3>
+                    <button id="addHotspotBtn">Create Hotspot</button>
+                    <button id="deleteElementBtn" class="danger hidden">Delete Selected</button>
+                    <h3 class="mt-2">Theme</h3>
+                    <select id="themeSelector">
+                        <option value="default">Futuristic Dark (Default)</option>
+                        <option value="light">Professional Light</option>
+                        <option value="neon">Neon Glow</option>
+                    </select>
+                     <h3 class="mt-2">Transitions</h3>
+                    <select id="transitionSelector">
+                        <option value="fade">Fade</option>
+                        <option value="slide-left">Slide Left</option>
+                        <option value="slide-right">Slide Right</option>
+                        <option value="none">None</option>
+                    </select>
+                </div>
+
+                <div id="slide-list-panel">
+                    <button id="addSlideBtn" style="width:100%; margin-bottom:10px;">Add New Slide</button>
+                    <div id="slidesContainer">
+                        <!-- Slide thumbnails will be populated here -->
+                    </div>
+                </div>
+
+                <div id="slide-editor-panel">
+                    <div id="slide-canvas-container">
+                        <div id="slide-canvas">
+                            <!-- Slide elements will be rendered here -->
+                        </div>
+                    </div>
+                </div>
+
+                <div id="properties-panel">
+                    <h3>Element Properties</h3>
+                    <div id="elementPropertiesForm" class="hidden">
+                        <!-- Text Properties -->
+                        <div class="property-group" id="textProps">
+                            <label for="elemTextContent">Text:</label>
+                            <textarea id="elemTextContent"></textarea>
+                            <label for="elemFontSize">Font Size (px):</label>
+                            <input type="number" id="elemFontSize" min="8" value="24">
+                            <label for="elemColor">Color:</label>
+                            <input type="color" id="elemColor" value="#E0E0E0">
+                        </div>
+                        <!-- Image Properties (maybe alt text) -->
+                        <div class="property-group" id="imageProps">
+                            <p>Image properties (e.g., aspect ratio) might appear here.</p>
+                        </div>
+                        <!-- Shape Properties -->
+                        <div class="property-group" id="shapeProps">
+                            <label for="elemShapeFillColor">Fill Color:</label>
+                            <input type="color" id="elemShapeFillColor" value="#00CFE8">
+                            <label for="elemShapeStrokeColor">Stroke Color:</label>
+                            <input type="color" id="elemShapeStrokeColor" value="#FFFFFF">
+                        </div>
+                         <!-- Common Position & Size -->
+                        <div class="property-group">
+                            <label for="elemX">X (%):</label> <input type="number" id="elemX" step="0.1" min="0" max="100">
+                            <label for="elemY">Y (%):</label> <input type="number" id="elemY" step="0.1" min="0" max="100">
+                            <label for="elemWidth">Width (%):</label> <input type="number" id="elemWidth" step="0.1" min="1" max="100">
+                            <label for="elemHeight">Height (%):</label> <input type="number" id="elemHeight" step="0.1" min="1" max="100">
+                        </div>
+                    </div>
+                    <div id="hotspotPropertiesForm" class="hidden">
+                        <h3>Hotspot Properties</h3>
+                        <div class="property-group">
+                            <label for="hotspotLinkTarget">Link to Slide:</label>
+                            <select id="hotspotLinkTarget"></select>
+                            <button id="deleteHotspotBtn" class="danger mt-1">Delete Hotspot</button>
+                        </div>
+                    </div>
+                    <div id="slidePropertiesForm">
+                        <h3>Slide Properties</h3>
+                        <div class="property-group">
+                            <label for="slideBgColor">Background Color:</label>
+                            <input type="color" id="slideBgColor" value="#1A1A3A">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="speaker-notes-panel" class="hidden">
+                <label for="speakerNotesTextarea">Speaker Notes:</label>
+                <textarea id="speakerNotesTextarea" placeholder="Enter speaker notes for the current slide..."></textarea>
+            </div>
+        </main>
+    </div>
+
+    <!-- Presenter View -->
+    <div id="presenter-view" class="hidden">
+        <div id="presenter-slide-container">
+            <div id="presenter-slide-content">
+                <!-- Current slide content dynamically rendered here -->
+            </div>
+        </div>
+        <!-- Speaker notes for presenter could be a separate window or a subtle overlay.
+             For simplicity, they are not directly displayed on the presentation screen to maintain Zero-UI.
+             They can be accessed via console or a secondary screen if presenter tools allow. -->
+    </div>
+
+    <!-- Generic Modal -->
+    <div id="genericModal" class="modal">
+        <div class="modal-content">
+            <h2 id="modalTitle">Modal Title</h2>
+            <p id="modalMessage">Modal message goes here.</p>
+            <div class="modal-buttons">
+                <button id="modalCancelBtn" class="secondary">Cancel</button>
+                <button id="modalConfirmBtn">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+// --- Author: Yasin Ullah (Pakistani) ---
+// --- PathPresenter Interactive ---
+
+(function() {
+    'use strict';
+
+    // --- Constants & Config ---
+    const DB_NAME = 'PathPresenterDB';
+    const DB_VERSION = 1;
+    const PRESENTATIONS_STORE = 'presentations';
+    const ASSETS_STORE = 'assets'; // For image blobs
+
+    let db;
+    let currentPresentation = null;
+    let currentSlideId = null;
+    let selectedElementId = null;
+    let selectedHotspotId = null;
+    let isDrawingHotspot = false;
+    let hotspotDrawStart = null;
+    let draggedElementInfo = null; // For element dragging
+
+    // --- DOM Elements ---
+    const appName = document.getElementById('appName');
+    const presentationListView = document.getElementById('presentation-list-view');
+    const editorView = document.getElementById('editor-view');
+    const presenterView = document.getElementById('presenter-view');
+    const mainContent = document.getElementById('main-content');
+
+    const newPresentationNameInput = document.getElementById('newPresentationName');
+    const createPresentationBtn = document.getElementById('createPresentationBtn');
+    const presentationsListDiv = document.getElementById('presentationsList');
+    const importFileBtn = document.querySelector('label[for="importFile"]');
+    const importFileInput = document.getElementById('importFile');
+
+    const savePresentationBtn = document.getElementById('savePresentationBtn');
+    const exportPresentationBtn = document.getElementById('exportPresentationBtn');
+    const presentBtn = document.getElementById('presentBtn');
+    const closePresentationBtn = document.getElementById('closePresentationBtn');
+
+    const toolbar = document.getElementById('toolbar');
+    const addTextBtn = document.getElementById('addTextBtn');
+    const addImageBtn = document.getElementById('addImageBtn');
+    const imageUploadInput = document.getElementById('imageUpload');
+    const addShapeBtn = document.getElementById('addShapeBtn');
+    const addHotspotBtn = document.getElementById('addHotspotBtn');
+    const deleteElementBtn = document.getElementById('deleteElementBtn');
+    const themeSelector = document.getElementById('themeSelector');
+    const transitionSelector = document.getElementById('transitionSelector');
+
+    const slideListPanel = document.getElementById('slide-list-panel');
+    const addSlideBtn = document.getElementById('addSlideBtn');
+    const slidesContainer = document.getElementById('slidesContainer');
+
+    const slideEditorPanel = document.getElementById('slide-editor-panel');
+    const slideCanvasContainer = document.getElementById('slide-canvas-container');
+    const slideCanvas = document.getElementById('slide-canvas');
+
+    const propertiesPanel = document.getElementById('properties-panel');
+    const elementPropertiesForm = document.getElementById('elementPropertiesForm');
+    const textPropsDiv = document.getElementById('textProps');
+    const imagePropsDiv = document.getElementById('imageProps');
+    const shapePropsDiv = document.getElementById('shapeProps');
+    const elemTextContent = document.getElementById('elemTextContent');
+    const elemFontSize = document.getElementById('elemFontSize');
+    const elemColor = document.getElementById('elemColor');
+    const elemShapeFillColor = document.getElementById('elemShapeFillColor');
+    const elemShapeStrokeColor = document.getElementById('elemShapeStrokeColor');
+    const elemX = document.getElementById('elemX');
+    const elemY = document.getElementById('elemY');
+    const elemWidth = document.getElementById('elemWidth');
+    const elemHeight = document.getElementById('elemHeight');
+
+    const hotspotPropertiesForm = document.getElementById('hotspotPropertiesForm');
+    const hotspotLinkTargetSelect = document.getElementById('hotspotLinkTarget');
+    const deleteHotspotBtn = document.getElementById('deleteHotspotBtn');
+
+    const slidePropertiesForm = document.getElementById('slidePropertiesForm');
+    const slideBgColorInput = document.getElementById('slideBgColor');
+
+    const speakerNotesPanel = document.getElementById('speaker-notes-panel');
+    const speakerNotesTextarea = document.getElementById('speakerNotesTextarea');
+
+    const presenterSlideContainer = document.getElementById('presenter-slide-container');
+    const presenterSlideContent = document.getElementById('presenter-slide-content');
+
+    const genericModal = document.getElementById('genericModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalMessage = document.getElementById('modalMessage');
+    const modalConfirmBtn = document.getElementById('modalConfirmBtn');
+    const modalCancelBtn = document.getElementById('modalCancelBtn');
+    let modalConfirmCallback = null;
+
+
+    // --- IndexedDB Service ---
+    function initDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+            request.onupgradeneeded = event => {
+                const dbInstance = event.target.result;
+                if (!dbInstance.objectStoreNames.contains(PRESENTATIONS_STORE)) {
+                    dbInstance.createObjectStore(PRESENTATIONS_STORE, { keyPath: 'id' });
+                }
+                if (!dbInstance.objectStoreNames.contains(ASSETS_STORE)) {
+                    // Assets store for blobs, keyPath could be assetId (e.g., UUID)
+                    dbInstance.createObjectStore(ASSETS_STORE, { keyPath: 'id' });
+                }
+            };
+
+            request.onsuccess = event => {
+                db = event.target.result;
+                console.log('Database initialized successfully.');
+                resolve(db);
+            };
+
+            request.onerror = event => {
+                console.error('Database error:', event.target.errorCode);
+                reject(event.target.errorCode);
+            };
+        });
+    }
+
+    function savePresentationToDB(presentationData) {
+        return new Promise((resolve, reject) => {
+            if (!db) { reject('DB not initialized'); return; }
+            const transaction = db.transaction([PRESENTATIONS_STORE], 'readwrite');
+            const store = transaction.objectStore(PRESENTATIONS_STORE);
+            const request = store.put(presentationData);
+
+            request.onsuccess = () => resolve();
+            request.onerror = event => reject('Error saving presentation: ' + event.target.errorCode);
+        });
+    }
+
+    function loadPresentationsFromDB() {
+        return new Promise((resolve, reject) => {
+            if (!db) { reject('DB not initialized'); return; }
+            const transaction = db.transaction([PRESENTATIONS_STORE], 'readonly');
+            const store = transaction.objectStore(PRESENTATIONS_STORE);
+            const request = store.getAll();
+
+            request.onsuccess = event => resolve(event.target.result);
+            request.onerror = event => reject('Error loading presentations: ' + event.target.errorCode);
+        });
+    }
+
+    function loadPresentationFromDB(id) {
+        return new Promise((resolve, reject) => {
+            if (!db) { reject('DB not initialized'); return; }
+            const transaction = db.transaction([PRESENTATIONS_STORE], 'readonly');
+            const store = transaction.objectStore(PRESENTATIONS_STORE);
+            const request = store.get(id);
+
+            request.onsuccess = event => resolve(event.target.result);
+            request.onerror = event => reject('Error loading presentation: ' + event.target.errorCode);
+        });
+    }
+
+    function deletePresentationFromDB(id) {
+        return new Promise((resolve, reject) => {
+            if (!db) { reject('DB not initialized'); return; }
+            const transaction = db.transaction([PRESENTATIONS_STORE], 'readwrite');
+            const store = transaction.objectStore(PRESENTATIONS_STORE);
+            const request = store.delete(id);
+
+            request.onsuccess = () => resolve();
+            request.onerror = event => reject('Error deleting presentation: ' + event.target.errorCode);
+        });
+    }
+
+    function saveAssetToDB(assetId, assetBlob) {
+        return new Promise((resolve, reject) => {
+            if (!db) { reject('DB not initialized'); return; }
+            const transaction = db.transaction([ASSETS_STORE], 'readwrite');
+            const store = transaction.objectStore(ASSETS_STORE);
+            const request = store.put({ id: assetId, blob: assetBlob });
+
+            request.onsuccess = () => resolve(assetId);
+            request.onerror = event => reject('Error saving asset: ' + event.target.errorCode);
+        });
+    }
+
+    function getAssetFromDB(assetId) {
+        return new Promise((resolve, reject) => {
+            if (!db) { reject('DB not initialized'); return; }
+            const transaction = db.transaction([ASSETS_STORE], 'readonly');
+            const store = transaction.objectStore(ASSETS_STORE);
+            const request = store.get(assetId);
+
+            request.onsuccess = event => {
+                if (event.target.result) {
+                    resolve(event.target.result.blob);
+                } else {
+                    reject('Asset not found');
+                }
+            };
+            request.onerror = event => reject('Error getting asset: ' + event.target.errorCode);
+        });
+    }
+    
+    function deleteAssetFromDB(assetId) {
+        return new Promise((resolve, reject) => {
+            if (!db) { reject('DB not initialized'); return; }
+            const transaction = db.transaction([ASSETS_STORE], 'readwrite');
+            const store = transaction.objectStore(ASSETS_STORE);
+            const request = store.delete(assetId);
+            request.onsuccess = () => resolve();
+            request.onerror = (event) => reject('Error deleting asset: ' + event.target.errorCode);
+        });
+    }
+
+
+    // --- UI Management ---
+    function showView(view) {
+        presentationListView.classList.add('hidden');
+        editorView.classList.add('hidden');
+        speakerNotesPanel.classList.add('hidden'); // Hide speaker notes by default
+        presenterView.classList.add('hidden');
+
+        savePresentationBtn.classList.add('hidden');
+        exportPresentationBtn.classList.add('hidden');
+        presentBtn.classList.add('hidden');
+        closePresentationBtn.classList.add('hidden');
+
+
+        if (view === 'list') {
+            presentationListView.classList.remove('hidden');
+            mainContent.style.display = 'flex'; // Ensure main content is flex for list view
+            editorView.style.display = 'none';
+        } else if (view === 'editor') {
+            editorView.classList.remove('hidden');
+            editorView.style.display = 'flex'; // Crucial for flex layout
+            speakerNotesPanel.classList.remove('hidden');
+            mainContent.style.display = 'flex';
+
+            savePresentationBtn.classList.remove('hidden');
+            exportPresentationBtn.classList.remove('hidden');
+            presentBtn.classList.remove('hidden');
+            closePresentationBtn.classList.remove('hidden');
+        } else if (view === 'presenter') {
+            presenterView.classList.remove('hidden');
+            mainContent.style.display = 'none'; // Hide main content for full screen presenter
+        }
+    }
+
+    function showModal(title, message, onConfirm) {
+        modalTitle.textContent = title;
+        modalMessage.innerHTML = message; // Use innerHTML to allow basic formatting if needed
+        modalConfirmCallback = onConfirm;
+        genericModal.style.display = 'flex';
+    }
+
+    function closeModal() {
+        genericModal.style.display = 'none';
+        modalConfirmCallback = null;
+    }
+
+    modalConfirmBtn.addEventListener('click', () => {
+        if (modalConfirmCallback) {
+            modalConfirmCallback();
+        }
+        closeModal();
+    });
+    modalCancelBtn.addEventListener('click', closeModal);
+
+
+    // --- Presentation Logic ---
+    function createNewPresentation() {
+        const name = newPresentationNameInput.value.trim();
+        if (!name) {
+            showModal('Error', 'Presentation name cannot be empty.', () => {});
+            return;
+        }
+
+        currentPresentation = {
+            id: crypto.randomUUID(),
+            name: name,
+            slides: [],
+            theme: 'default',
+            defaultTransition: 'fade',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+        addNewSlide(true); // Add an initial slide and select it
+        saveCurrentPresentation();
+        openEditorView();
+        newPresentationNameInput.value = '';
+    }
+
+    function loadPresentation(id) {
+        loadPresentationFromDB(id).then(data => {
+            if (data) {
+                currentPresentation = data;
+                // Ensure slides is an array, elements is an array, hotspots is an array
+                currentPresentation.slides = currentPresentation.slides || [];
+                currentPresentation.slides.forEach(slide => {
+                    slide.elements = slide.elements || [];
+                    slide.hotspots = slide.hotspots || [];
+                });
+                currentPresentation.theme = currentPresentation.theme || 'default';
+                currentPresentation.defaultTransition = currentPresentation.defaultTransition || 'fade';
+
+                if (currentPresentation.slides.length > 0) {
+                    currentSlideId = currentPresentation.slides[0].id;
+                } else {
+                    addNewSlide(true); // Add a slide if presentation is empty
+                }
+                openEditorView();
+            } else {
+                showModal('Error', 'Could not load presentation.', () => {});
+            }
+        }).catch(err => {
+            console.error(err);
+            showModal('Error', `Failed to load presentation: ${err}`, () => {});
+        });
+    }
+
+    async function saveCurrentPresentation() {
+        if (!currentPresentation) return;
+        currentPresentation.updatedAt = new Date().toISOString();
+        try {
+            await savePresentationToDB(currentPresentation);
+            console.log('Presentation saved.');
+            // Optionally show a small success message
+            // renderSlideList(); // Re-render in case slide order/count changed - only if necessary
+        } catch (err) {
+            console.error('Failed to save presentation:', err);
+            showModal('Error', `Failed to save presentation: ${err}`, () => {});
+        }
+    }
+
+    function closeCurrentPresentation() {
+        currentPresentation = null;
+        currentSlideId = null;
+        selectedElementId = null;
+        selectedHotspotId = null;
+        slideCanvas.innerHTML = '';
+        slidesContainer.innerHTML = '';
+        elementPropertiesForm.classList.add('hidden');
+        hotspotPropertiesForm.classList.add('hidden');
+        showView('list');
+        refreshPresentationList();
+    }
+
+    function exportPresentation() {
+        if (!currentPresentation) return;
+        const filename = `${currentPresentation.name.replace(/\s+/g, '_') || 'presentation'}.json`;
+        const json = JSON.stringify(currentPresentation, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    function importPresentation(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    // Basic validation
+                    if (importedData.id && importedData.name && Array.isArray(importedData.slides)) {
+                        // Check for ID collision
+                        const existing = await loadPresentationFromDB(importedData.id).catch(() => null);
+                        if (existing) {
+                           showModal("Import Conflict", `A presentation with ID ${importedData.id} already exists. Overwrite?`, () => {
+                                proceedWithImport(importedData);
+                           });
+                        } else {
+                            proceedWithImport(importedData);
+                        }
+                    } else {
+                        showModal('Import Error', 'Invalid presentation file format.', () => {});
+                    }
+                } catch (err) {
+                    console.error('Import error:', err);
+                    showModal('Import Error', `Failed to parse JSON file: ${err.message}`, () => {});
+                } finally {
+                    importFileInput.value = ''; // Reset file input
+                }
+            };
+            reader.readAsText(file);
+        }
+    }
+
+    async function proceedWithImport(importedData) {
+        // Sanitize/migrate data if necessary (future)
+        importedData.slides = importedData.slides || [];
+        importedData.slides.forEach(slide => {
+            slide.elements = slide.elements || [];
+            slide.hotspots = slide.hotspots || [];
+        });
+        importedData.theme = importedData.theme || 'default';
+        importedData.defaultTransition = importedData.defaultTransition || 'fade';
+
+        await savePresentationToDB(importedData);
+        showModal('Import Success', `Presentation "${importedData.name}" imported successfully.`, () => {
+            refreshPresentationList();
+            loadPresentation(importedData.id); // Optionally load the imported presentation
+        });
+    }
+
+
+    function refreshPresentationList() {
+        loadPresentationsFromDB().then(presentations => {
+            presentationsListDiv.innerHTML = '';
+            if (presentations.length === 0) {
+                presentationsListDiv.innerHTML = '<p>No presentations yet. Create one!</p>';
+                return;
+            }
+            presentations.sort((a,b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+            presentations.forEach(p => {
+                const item = document.createElement('div');
+                item.className = 'presentation-item';
+                item.innerHTML = `
+                    <span data-id="${p.id}">${p.name} (Updated: ${new Date(p.updatedAt || p.createdAt).toLocaleDateString()})</span>
+                    <div>
+                        <button class="secondary small-btn edit-pres-btn" data-id="${p.id}">Edit</button>
+                        <button class="danger small-btn delete-pres-btn" data-id="${p.id}">Delete</button>
+                    </div>
+                `;
+                item.querySelector('span').addEventListener('click', () => loadPresentation(p.id));
+                item.querySelector('.edit-pres-btn').addEventListener('click', () => loadPresentation(p.id));
+                item.querySelector('.delete-pres-btn').addEventListener('click', () => confirmDeletePresentation(p.id, p.name));
+                presentationsListDiv.appendChild(item);
+            });
+        }).catch(err => {
+            console.error(err);
+            presentationsListDiv.innerHTML = '<p>Error loading presentations.</p>';
+        });
+    }
+
+    function confirmDeletePresentation(id, name) {
+        showModal(
+            'Delete Presentation',
+            `Are you sure you want to delete "${name}"? This action cannot be undone.`,
+            async () => {
+                const presToDelete = await loadPresentationFromDB(id);
+                if (presToDelete && presToDelete.slides) {
+                    for (const slide of presToDelete.slides) {
+                        if (slide.elements) {
+                            for (const el of slide.elements) {
+                                if (el.type === 'image' && el.assetId) {
+                                    try {
+                                        await deleteAssetFromDB(el.assetId);
+                                        console.log(`Deleted asset ${el.assetId}`);
+                                    } catch (assetErr) {
+                                        console.warn(`Could not delete asset ${el.assetId}: ${assetErr}`);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                deletePresentationFromDB(id)
+                    .then(() => {
+                        refreshPresentationList();
+                        showModal('Success', `Presentation "${name}" deleted.`, () => {});
+                    })
+                    .catch(err => showModal('Error', `Failed to delete: ${err}`, () => {}));
+            }
+        );
+    }
+
+    function openEditorView() {
+        showView('editor');
+        applyTheme(currentPresentation.theme);
+        themeSelector.value = currentPresentation.theme;
+        transitionSelector.value = currentPresentation.defaultTransition;
+        renderSlideList();
+        if (currentSlideId) {
+            selectSlide(currentSlideId);
+        } else if (currentPresentation.slides.length > 0) {
+            selectSlide(currentPresentation.slides[0].id);
+        }
+        updatePropertiesPanelVisibility();
+    }
+
+    // --- Slide Management ---
+    function getCurrentSlide() {
+        if (!currentPresentation || !currentSlideId) return null;
+        return currentPresentation.slides.find(s => s.id === currentSlideId);
+    }
+
+    function addNewSlide(selectIt = false) {
+        if (!currentPresentation) return;
+        const newSlide = {
+            id: crypto.randomUUID(),
+            elements: [],
+            hotspots: [],
+            backgroundColor: '#1A1A3A', // Default slide BG
+            speakerNotes: ''
+        };
+        currentPresentation.slides.push(newSlide);
+        if (selectIt || currentPresentation.slides.length === 1) {
+            currentSlideId = newSlide.id;
+        }
+        renderSlideList();
+        if (selectIt) {
+            selectSlide(newSlide.id);
+        }
+        saveCurrentPresentation();
+    }
+
+    function deleteCurrentSlide() {
+        if (!currentPresentation || !currentSlideId || currentPresentation.slides.length <= 1) {
+            showModal('Action Denied', 'Cannot delete the last slide. A presentation must have at least one slide.', () => {});
+            return;
+        }
+
+        showModal('Delete Slide', 'Are you sure you want to delete this slide and all its content?', async () => {
+            const slideIndex = currentPresentation.slides.findIndex(s => s.id === currentSlideId);
+            if (slideIndex > -1) {
+                const slideToRemove = currentPresentation.slides[slideIndex];
+                if (slideToRemove.elements) {
+                    for (const el of slideToRemove.elements) {
+                        if (el.type === 'image' && el.assetId) {
+                            try {
+                                await deleteAssetFromDB(el.assetId);
+                                console.log(`Deleted asset ${el.assetId} from slide ${slideToRemove.id}`);
+                            } catch (assetErr) {
+                                console.warn(`Could not delete asset ${el.assetId}: ${assetErr}`);
+                            }
+                        }
+                    }
+                }
+
+                currentPresentation.slides.splice(slideIndex, 1);
+                currentPresentation.slides.forEach(s => {
+                    s.hotspots = s.hotspots.filter(h => h.targetSlideId !== currentSlideId);
+                });
+
+                if (currentPresentation.slides.length > 0) {
+                    currentSlideId = currentPresentation.slides[Math.max(0, slideIndex - 1)].id;
+                } else {
+                    currentSlideId = null; 
+                }
+                renderSlideList();
+                if (currentSlideId) {
+                    selectSlide(currentSlideId);
+                } else {
+                    slideCanvas.innerHTML = ''; 
+                }
+                saveCurrentPresentation();
+            }
+        });
+    }
+
+    function selectSlide(slideId) {
+        currentSlideId = slideId;
+        selectedElementId = null;
+        selectedHotspotId = null;
+        isDrawingHotspot = false;
+        slideCanvas.classList.remove('crosshair-cursor');
+
+        renderSlideList(); // To update active state
+        renderCurrentSlideInEditor();
+        updatePropertiesPanelVisibility();
+        updateSpeakerNotes();
+        updateHotspotLinkTargetOptions(); 
+    }
+
+    function renderSlideList() {
+        if (!currentPresentation) return;
+        slidesContainer.innerHTML = '';
+        currentPresentation.slides.forEach((slide, index) => {
+            const thumb = document.createElement('div');
+            thumb.className = 'slide-thumbnail';
+            thumb.textContent = `Slide ${index + 1}`;
+            thumb.dataset.id = slide.id;
+            if (slide.id === currentSlideId) {
+                thumb.classList.add('active');
+            }
+            thumb.addEventListener('click', () => selectSlide(slide.id));
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-slide-btn';
+            deleteBtn.innerHTML = '×';
+            deleteBtn.title = 'Delete Slide';
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); 
+                if (slide.id === currentSlideId) { 
+                    deleteCurrentSlide();
+                } else { 
+                    selectSlide(slide.id);
+                    deleteCurrentSlide();
+                }
+            });
+            thumb.appendChild(deleteBtn);
+
+            slidesContainer.appendChild(thumb);
+        });
+    }
+
+    // --- Element Dragging ---
+    function handleElementMouseDown(event, elementId) {
+        if (isDrawingHotspot) return; 
+        event.preventDefault(); 
+        event.stopPropagation();
+
+        selectElement(elementId); // Select the element. This re-renders the slide.
+
+        // After re-render, get the current data and DOM element instance
+        const currentSlide = getCurrentSlide();
+        const elementData = currentSlide?.elements.find(el => el.id === elementId);
+        if (!elementData) return;
+
+        const domElement = slideCanvas.querySelector(`.slide-element[data-id="${elementId}"]`);
+        if (!domElement) return; 
+
+        const canvasRect = slideCanvas.getBoundingClientRect();
+
+        draggedElementInfo = {
+            elementId: elementId,
+            initialElemXPercent: elementData.x,
+            initialElemYPercent: elementData.y,
+            startMouseX: event.clientX,
+            startMouseY: event.clientY,
+            canvasWidthPx: canvasRect.width,
+            canvasHeightPx: canvasRect.height,
+            draggedDOMElement: domElement // Store the DOM element
+        };
+
+        document.addEventListener('mousemove', handleElementMouseMove);
+        document.addEventListener('mouseup', handleElementMouseUp);
+    }
+
+    function handleElementMouseMove(event) {
+        if (!draggedElementInfo) return;
+        event.preventDefault();
+
+        const deltaMouseX = event.clientX - draggedElementInfo.startMouseX;
+        const deltaMouseY = event.clientY - draggedElementInfo.startMouseY;
+
+        const deltaXPercent = (deltaMouseX / draggedElementInfo.canvasWidthPx) * 100;
+        const deltaYPercent = (deltaMouseY / draggedElementInfo.canvasHeightPx) * 100;
+
+        let newXPercent = draggedElementInfo.initialElemXPercent + deltaXPercent;
+        let newYPercent = draggedElementInfo.initialElemYPercent + deltaYPercent;
+
+        const slide = getCurrentSlide();
+        const element = slide?.elements.find(el => el.id === draggedElementInfo.elementId);
+        if (!element) return;
+
+        // Clamp values to keep element within canvas boundaries
+        newXPercent = Math.max(0, Math.min(newXPercent, 100 - element.width));
+        newYPercent = Math.max(0, Math.min(newYPercent, 100 - element.height));
+        
+        element.x = newXPercent;
+        element.y = newYPercent;
+
+        if (draggedElementInfo.draggedDOMElement) {
+            draggedElementInfo.draggedDOMElement.style.left = newXPercent + '%';
+            draggedElementInfo.draggedDOMElement.style.top = newYPercent + '%';
+        }
+
+        elemX.value = newXPercent.toFixed(1);
+        elemY.value = newYPercent.toFixed(1);
+    }
+
+    function handleElementMouseUp(event) {
+        if (!draggedElementInfo) return;
+        event.preventDefault();
+
+        document.removeEventListener('mousemove', handleElementMouseMove);
+        document.removeEventListener('mouseup', handleElementMouseUp);
+        
+        // Ensure properties panel reflects the final dragged state from the data model
+        populateElementProperties(); 
+
+        draggedElementInfo = null;
+        saveCurrentPresentation();
+    }
+
+
+    // --- Element Management ---
+    function addElementToSlide(type) {
+        const slide = getCurrentSlide();
+        if (!slide) return;
+
+        const newElement = {
+            id: crypto.randomUUID(),
+            type: type,
+            x: 10, y: 10, 
+            width: (type === 'text' || type === 'image') ? 30 : 20, 
+            height: (type === 'text' || type === 'image') ? 10 : 20, 
+        };
+
+        switch (type) {
+            case 'text':
+                newElement.content = 'New Text';
+                newElement.fontSize = 16; 
+                newElement.color = '#E0E0E0';
+                break;
+            case 'image':
+                newElement.assetId = null;
+                newElement.src = ''; 
+                break;
+            case 'shape': 
+                newElement.shapeType = 'rectangle';
+                newElement.fillColor = '#00CFE8';
+                newElement.strokeColor = '#FFFFFF';
+                break;
+        }
+        slide.elements.push(newElement);
+        renderCurrentSlideInEditor();
+        selectElement(newElement.id);
+        saveCurrentPresentation();
+    }
+
+    function handleImageUpload(event) {
+        const file = event.target.files[0];
+        if (file && currentSlideId) {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const assetId = crypto.randomUUID();
+                try {
+                    await saveAssetToDB(assetId, file); 
+
+                    const slide = getCurrentSlide();
+                    const newElement = {
+                        id: crypto.randomUUID(),
+                        type: 'image',
+                        assetId: assetId,
+                        x: 10, y: 10, width: 30, height: 20, 
+                    };
+                    slide.elements.push(newElement);
+                    renderCurrentSlideInEditor();
+                    selectElement(newElement.id);
+                    saveCurrentPresentation();
+
+                } catch (err) {
+                    console.error("Error saving asset or updating slide:", err);
+                    showModal('Error', `Could not process image: ${err}`, () => {});
+                }
+            };
+            reader.readAsArrayBuffer(file); 
+            imageUploadInput.value = ''; 
+        }
+    }
+
+
+    function selectElement(elementId) {
+        selectedElementId = elementId;
+        selectedHotspotId = null; 
+        isDrawingHotspot = false;
+        slideCanvas.classList.remove('crosshair-cursor');
+        renderCurrentSlideInEditor(); // Re-render to show selection
+        updatePropertiesPanelVisibility();
+        populateElementProperties();
+    }
+
+    function deleteSelectedElement() {
+        const slide = getCurrentSlide();
+        if (!slide || !selectedElementId) return;
+
+        showModal('Delete Element', 'Are you sure you want to delete this element?', async () => {
+            const elementIndex = slide.elements.findIndex(el => el.id === selectedElementId);
+            if (elementIndex > -1) {
+                const elementToRemove = slide.elements[elementIndex];
+                if (elementToRemove.type === 'image' && elementToRemove.assetId) {
+                    try {
+                        await deleteAssetFromDB(elementToRemove.assetId);
+                        console.log(`Deleted asset ${elementToRemove.assetId}`);
+                    } catch (err) {
+                        console.warn(`Could not delete asset ${elementToRemove.assetId}: ${err}`);
+                    }
+                }
+
+                slide.elements.splice(elementIndex, 1);
+                selectedElementId = null;
+                renderCurrentSlideInEditor();
+                updatePropertiesPanelVisibility();
+                saveCurrentPresentation();
+            }
+        });
+    }
+
+    // --- Hotspot Management ---
+    function toggleHotspotDrawMode() {
+        isDrawingHotspot = !isDrawingHotspot;
+        if (isDrawingHotspot) {
+            slideCanvas.classList.add('crosshair-cursor');
+            addHotspotBtn.textContent = 'Cancel Drawing';
+            addHotspotBtn.classList.add('danger');
+            selectedElementId = null; 
+            selectedHotspotId = null;
+            updatePropertiesPanelVisibility();
+            renderCurrentSlideInEditor(); 
+        } else {
+            slideCanvas.classList.remove('crosshair-cursor');
+            addHotspotBtn.textContent = 'Create Hotspot';
+            addHotspotBtn.classList.remove('danger');
+            hotspotDrawStart = null;
+            const tempRect = slideCanvas.querySelector('.hotspot-overlay.drawing');
+            if (tempRect) tempRect.remove();
+        }
+    }
+
+    function handleSlideCanvasMouseDown(event) {
+        if (!isDrawingHotspot || !slideCanvasContainer) return;
+        if (event.target.closest('.slide-element, .hotspot-overlay:not(.drawing)')) return;
+
+
+        const rect = slideCanvas.getBoundingClientRect();
+        hotspotDrawStart = {
+            x: (event.clientX - rect.left) / rect.width * 100,
+            y: (event.clientY - rect.top) / rect.height * 100
+        };
+
+        let tempRect = slideCanvas.querySelector('.hotspot-overlay.drawing');
+        if (!tempRect) {
+            tempRect = document.createElement('div');
+            tempRect.className = 'hotspot-overlay drawing';
+            slideCanvas.appendChild(tempRect);
+        }
+        tempRect.style.left = hotspotDrawStart.x + '%';
+        tempRect.style.top = hotspotDrawStart.y + '%';
+        tempRect.style.width = '0%';
+        tempRect.style.height = '0%';
+    }
+
+    function handleSlideCanvasMouseMove(event) {
+        if (draggedElementInfo) return; // If dragging element, don't draw hotspot
+        if (!isDrawingHotspot || !hotspotDrawStart || !slideCanvasContainer) return;
+
+        const rect = slideCanvas.getBoundingClientRect();
+        const currentX = (event.clientX - rect.left) / rect.width * 100;
+        const currentY = (event.clientY - rect.top) / rect.height * 100;
+
+        const newX = Math.min(hotspotDrawStart.x, currentX);
+        const newY = Math.min(hotspotDrawStart.y, currentY);
+        const newWidth = Math.abs(currentX - hotspotDrawStart.x);
+        const newHeight = Math.abs(currentY - hotspotDrawStart.y);
+
+        const tempRect = slideCanvas.querySelector('.hotspot-overlay.drawing');
+        if (tempRect) {
+            tempRect.style.left = newX + '%';
+            tempRect.style.top = newY + '%';
+            tempRect.style.width = newWidth + '%';
+            tempRect.style.height = newHeight + '%';
+        }
+    }
+
+    function handleSlideCanvasMouseUp(event) {
+        if (draggedElementInfo) return; // If dragging element, don't finalize hotspot
+        if (!isDrawingHotspot || !hotspotDrawStart || !slideCanvasContainer) return;
+
+        const tempRectVisual = slideCanvas.querySelector('.hotspot-overlay.drawing');
+        if (tempRectVisual) tempRectVisual.remove();
+
+        const rect = slideCanvas.getBoundingClientRect();
+        const endX = (event.clientX - rect.left) / rect.width * 100;
+        const endY = (event.clientY - rect.top) / rect.height * 100;
+
+        const x = Math.min(hotspotDrawStart.x, endX);
+        const y = Math.min(hotspotDrawStart.y, endY);
+        const width = Math.abs(endX - hotspotDrawStart.x);
+        const height = Math.abs(endY - hotspotDrawStart.y);
+
+        hotspotDrawStart = null; 
+
+        if (width < 1 || height < 1) { 
+            toggleHotspotDrawMode(); 
+            return;
+        }
+
+        const slide = getCurrentSlide();
+        if (!slide) return;
+
+        const newHotspot = {
+            id: crypto.randomUUID(),
+            x: x, y: y, width: width, height: height,
+            targetSlideId: currentPresentation.slides.length > 1 ? currentPresentation.slides.find(s => s.id !== currentSlideId)?.id || currentPresentation.slides[0].id : currentSlideId
+        };
+        slide.hotspots.push(newHotspot);
+        toggleHotspotDrawMode(); 
+        renderCurrentSlideInEditor();
+        selectHotspot(newHotspot.id);
+        saveCurrentPresentation();
+    }
+
+    function selectHotspot(hotspotId) {
+        selectedHotspotId = hotspotId;
+        selectedElementId = null; 
+        isDrawingHotspot = false; 
+        slideCanvas.classList.remove('crosshair-cursor');
+        addHotspotBtn.textContent = 'Create Hotspot';
+        addHotspotBtn.classList.remove('danger');
+
+        renderCurrentSlideInEditor(); 
+        updatePropertiesPanelVisibility();
+        populateHotspotProperties();
+    }
+
+    function deleteSelectedHotspot() {
+        const slide = getCurrentSlide();
+        if (!slide || !selectedHotspotId) return;
+
+        showModal('Delete Hotspot', 'Are you sure you want to delete this hotspot?', () => {
+            slide.hotspots = slide.hotspots.filter(h => h.id !== selectedHotspotId);
+            selectedHotspotId = null;
+            renderCurrentSlideInEditor();
+            updatePropertiesPanelVisibility();
+            saveCurrentPresentation();
+        });
+    }
+
+    // --- Slide Rendering (Editor) ---
+    async function renderCurrentSlideInEditor() {
+        const slide = getCurrentSlide();
+        slideCanvas.innerHTML = ''; 
+
+        if (!slide) {
+            slideCanvas.innerHTML = '<p style="text-align:center; padding-top: 20px;">Select or create a slide.</p>';
+            slideCanvasContainer.style.backgroundColor = 'var(--slide-bg)';
+            return;
+        }
+
+        slideCanvasContainer.style.backgroundColor = slide.backgroundColor || 'var(--slide-bg)';
+
+        for (const el of slide.elements) {
+            const elemDiv = document.createElement('div');
+            elemDiv.className = 'slide-element ' + el.type + '-element';
+            elemDiv.dataset.id = el.id;
+            elemDiv.style.left = el.x + '%';
+            elemDiv.style.top = el.y + '%';
+            elemDiv.style.width = el.width + '%';
+            elemDiv.style.height = el.height + '%';
+
+            if (el.id === selectedElementId) {
+                elemDiv.classList.add('selected');
+            }
+
+            switch (el.type) {
+                case 'text':
+                    elemDiv.textContent = el.content;
+                    elemDiv.style.fontSize = el.fontSize + 'px'; 
+                    elemDiv.style.color = el.color;
+                    break;
+                case 'image':
+                    if (el.assetId) {
+                        try {
+                            const assetBlob = await getAssetFromDB(el.assetId);
+                            const img = document.createElement('img');
+                            img.src = URL.createObjectURL(assetBlob);
+                            img.onload = () => URL.revokeObjectURL(img.src); 
+                            elemDiv.appendChild(img);
+                        } catch (err) {
+                            console.error(`Error loading asset ${el.assetId}:`, err);
+                            elemDiv.textContent = 'Error loading image';
+                            elemDiv.style.color = 'red';
+                        }
+                    } else {
+                        elemDiv.textContent = 'Image (no asset)';
+                    }
+                    break;
+                case 'shape':
+                    const svgNS = "http://www.w3.org/2000/svg";
+                    const svg = document.createElementNS(svgNS, "svg");
+                    svg.setAttribute("viewBox", "0 0 100 100"); 
+                    svg.style.setProperty('vector-effect', 'non-scaling-stroke', ''); 
+
+                    if (el.shapeType === 'rectangle') {
+                        const rect = document.createElementNS(svgNS, "rect");
+                        rect.setAttribute("x", "0");
+                        rect.setAttribute("y", "0");
+                        rect.setAttribute("width", "100");
+                        rect.setAttribute("height", "100");
+                        rect.setAttribute("fill", el.fillColor || 'transparent');
+                        rect.setAttribute("stroke", el.strokeColor || 'none');
+                        rect.setAttribute("stroke-width", "2"); 
+                        svg.appendChild(rect);
+                    }
+                    elemDiv.appendChild(svg);
+                    break;
+            }
+            // Click listener for selection is now primarily handled by mousedown for drag initiation
+            // Keeping a basic click for stopPropagation might be useful.
+            elemDiv.addEventListener('click', (e) => {
+                e.stopPropagation(); 
+                // If not dragging, and a click occurs, selection should have happened on mousedown.
+                // If it's a simple click without drag, mousedown would have selected it.
+            });
+            elemDiv.addEventListener('mousedown', (e) => handleElementMouseDown(e, el.id));
+            slideCanvas.appendChild(elemDiv);
+        }
+
+        slide.hotspots.forEach(hotspot => {
+            const hotspotDiv = document.createElement('div');
+            hotspotDiv.className = 'hotspot-overlay';
+            hotspotDiv.dataset.id = hotspot.id;
+            hotspotDiv.style.left = hotspot.x + '%';
+            hotspotDiv.style.top = hotspot.y + '%';
+            hotspotDiv.style.width = hotspot.width + '%';
+            hotspotDiv.style.height = hotspot.height + '%';
+            const targetSlide = currentPresentation.slides.find(s => s.id === hotspot.targetSlideId);
+            const targetSlideIndex = currentPresentation.slides.indexOf(targetSlide);
+            hotspotDiv.textContent = `Link: Slide ${targetSlideIndex !== -1 ? targetSlideIndex + 1 : 'N/A'}`;
+
+            if (hotspot.id === selectedHotspotId) {
+                hotspotDiv.style.borderColor = 'var(--accent-color)'; 
+                hotspotDiv.style.backgroundColor = 'rgba(0, 207, 232, 0.3)';
+            }
+
+            hotspotDiv.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (isDrawingHotspot) return;
+                selectHotspot(hotspot.id);
+            });
+            slideCanvas.appendChild(hotspotDiv);
+        });
+    }
+
+
+    // --- Properties Panel ---
+    function updatePropertiesPanelVisibility() {
+        const slide = getCurrentSlide();
+        elementPropertiesForm.classList.add('hidden');
+        hotspotPropertiesForm.classList.add('hidden');
+        slidePropertiesForm.classList.add('hidden'); 
+        deleteElementBtn.classList.add('hidden');
+
+        if (selectedElementId && slide) {
+            elementPropertiesForm.classList.remove('hidden');
+            deleteElementBtn.classList.remove('hidden');
+            const element = slide.elements.find(el => el.id === selectedElementId);
+            textPropsDiv.classList.add('hidden');
+            imagePropsDiv.classList.add('hidden');
+            shapePropsDiv.classList.add('hidden');
+            if (element) {
+                if (element.type === 'text') textPropsDiv.classList.remove('hidden');
+                else if (element.type === 'image') imagePropsDiv.classList.remove('hidden');
+                else if (element.type === 'shape') shapePropsDiv.classList.remove('hidden');
+            }
+        } else if (selectedHotspotId && slide) {
+            hotspotPropertiesForm.classList.remove('hidden');
+        } else if (slide) { 
+            slidePropertiesForm.classList.remove('hidden');
+            populateSlideProperties();
+        }
+    }
+
+    function populateElementProperties() {
+        const slide = getCurrentSlide();
+        const element = slide?.elements.find(el => el.id === selectedElementId);
+        if (!element) return;
+
+        elemX.value = parseFloat(element.x).toFixed(1);
+        elemY.value = parseFloat(element.y).toFixed(1);
+        elemWidth.value = parseFloat(element.width).toFixed(1);
+        elemHeight.value = parseFloat(element.height).toFixed(1);
+
+        if (element.type === 'text') {
+            elemTextContent.value = element.content;
+            elemFontSize.value = element.fontSize;
+            elemColor.value = element.color;
+        } else if (element.type === 'shape') {
+            elemShapeFillColor.value = element.fillColor;
+            elemShapeStrokeColor.value = element.strokeColor;
+        }
+    }
+
+    function updateElementProperties() {
+        if (draggedElementInfo) return; // Don't update from panel if currently dragging
+
+        const slide = getCurrentSlide();
+        const element = slide?.elements.find(el => el.id === selectedElementId);
+        if (!element) return;
+
+        element.x = parseFloat(elemX.value);
+        element.y = parseFloat(elemY.value);
+        element.width = parseFloat(elemWidth.value);
+        element.height = parseFloat(elemHeight.value);
+
+        if (element.type === 'text') {
+            element.content = elemTextContent.value;
+            element.fontSize = parseInt(elemFontSize.value);
+            element.color = elemColor.value;
+        } else if (element.type === 'shape') {
+            element.fillColor = elemShapeFillColor.value;
+            element.strokeColor = elemShapeStrokeColor.value;
+        }
+        renderCurrentSlideInEditor();
+        saveCurrentPresentation();
+    }
+
+    function populateHotspotProperties() {
+        const slide = getCurrentSlide();
+        const hotspot = slide?.hotspots.find(h => h.id === selectedHotspotId);
+        if (!hotspot) return;
+
+        updateHotspotLinkTargetOptions(); 
+        hotspotLinkTargetSelect.value = hotspot.targetSlideId || '';
+    }
+
+    function updateHotspotProperties() {
+        const slide = getCurrentSlide();
+        const hotspot = slide?.hotspots.find(h => h.id === selectedHotspotId);
+        if (!hotspot) return;
+
+        hotspot.targetSlideId = hotspotLinkTargetSelect.value;
+        renderCurrentSlideInEditor(); 
+        saveCurrentPresentation();
+    }
+
+    function updateHotspotLinkTargetOptions() {
+        hotspotLinkTargetSelect.innerHTML = '';
+        if (!currentPresentation) return;
+        currentPresentation.slides.forEach((s, index) => {
+            const option = document.createElement('option');
+            option.value = s.id;
+            option.textContent = `Slide ${index + 1}` + (s.id === currentSlideId ? " (Current)" : "");
+            hotspotLinkTargetSelect.appendChild(option);
+        });
+    }
+
+    function populateSlideProperties() {
+        const slide = getCurrentSlide();
+        if (!slide) return;
+        slideBgColorInput.value = slide.backgroundColor || '#1A1A3A';
+    }
+
+    function updateSlideProperties() {
+        const slide = getCurrentSlide();
+        if (!slide) return;
+        slide.backgroundColor = slideBgColorInput.value;
+        renderCurrentSlideInEditor();
+        saveCurrentPresentation();
+    }
+
+    // --- Speaker Notes ---
+    function updateSpeakerNotes() {
+        const slide = getCurrentSlide();
+        if (slide) {
+            speakerNotesTextarea.value = slide.speakerNotes || '';
+            speakerNotesTextarea.disabled = false;
+        } else {
+            speakerNotesTextarea.value = '';
+            speakerNotesTextarea.disabled = true;
+        }
+    }
+
+    function saveSpeakerNotes() {
+        const slide = getCurrentSlide();
+        if (slide) {
+            slide.speakerNotes = speakerNotesTextarea.value;
+            saveCurrentPresentation(); 
+        }
+    }
+
+    // --- Theming ---
+    function applyTheme(themeName) {
+        document.documentElement.className = `theme-${themeName}`; 
+        if (themeName === 'light') {
+            document.documentElement.style.setProperty('--primary-color', '#FFFFFF');
+            document.documentElement.style.setProperty('--secondary-color', '#F0F0F0');
+            document.documentElement.style.setProperty('--text-color', '#333333');
+            document.documentElement.style.setProperty('--accent-color', '#007BFF');
+            document.documentElement.style.setProperty('--highlight-color', '#FF6347');
+            document.documentElement.style.setProperty('--border-color', '#DDDDDD');
+            document.documentElement.style.setProperty('--slide-bg', '#E8E8E8');
+            document.documentElement.style.setProperty('--input-bg', '#FFFFFF');
+            document.documentElement.style.setProperty('--input-border', '#CCCCCC');
+            document.documentElement.style.setProperty('--button-text', '#FFFFFF');
+        } else if (themeName === 'neon') {
+            document.documentElement.style.setProperty('--primary-color', '#0A0A1E');
+            document.documentElement.style.setProperty('--secondary-color', '#141435');
+            document.documentElement.style.setProperty('--text-color', '#F0F0F0');
+            document.documentElement.style.setProperty('--accent-color', '#00FFFF'); 
+            document.documentElement.style.setProperty('--highlight-color', '#FF00FF'); 
+            document.documentElement.style.setProperty('--border-color', '#303050');
+            document.documentElement.style.setProperty('--slide-bg', '#101028');
+            document.documentElement.style.setProperty('--input-bg', '#181840');
+            document.documentElement.style.setProperty('--input-border', '#00FFFF');
+            document.documentElement.style.setProperty('--button-text', '#0A0A1E');
+        } else { 
+            document.documentElement.style.setProperty('--primary-color', '#0D0D2B');
+            document.documentElement.style.setProperty('--secondary-color', '#2A2A4D');
+            document.documentElement.style.setProperty('--text-color', '#E0E0E0');
+            document.documentElement.style.setProperty('--accent-color', '#00CFE8');
+            document.documentElement.style.setProperty('--highlight-color', '#FF4081');
+            document.documentElement.style.setProperty('--border-color', '#4A4A6A');
+            document.documentElement.style.setProperty('--slide-bg', '#1A1A3A');
+            document.documentElement.style.setProperty('--input-bg', '#252540');
+            document.documentElement.style.setProperty('--input-border', 'var(--border-color)');
+            document.documentElement.style.setProperty('--button-text', 'var(--primary-color)');
+        }
+
+        if (currentPresentation) {
+            currentPresentation.theme = themeName;
+        }
+    }
+
+    // --- Presentation Mode ---
+    let presenterCurrentSlideIndex = 0;
+    let presenterSlideHistory = [];
+
+    function startPresentation() {
+        if (!currentPresentation || currentPresentation.slides.length === 0) {
+            showModal('Error', 'No slides to present.', () => {});
+            return;
+        }
+        presenterCurrentSlideIndex = currentPresentation.slides.findIndex(s => s.id === currentSlideId);
+        if (presenterCurrentSlideIndex === -1) presenterCurrentSlideIndex = 0;
+
+        presenterSlideHistory = [presenterCurrentSlideIndex];
+        showView('presenter');
+        document.documentElement.requestFullscreen().catch(err => {
+            console.warn(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+        });
+        renderCurrentSlideInPresenter();
+        const currentSlideData = currentPresentation.slides[presenterCurrentSlideIndex];
+        if (currentSlideData.speakerNotes) {
+            console.log(`Speaker Notes (Slide ${presenterCurrentSlideIndex + 1}):\n${currentSlideData.speakerNotes}`);
+        }
+    }
+
+    function exitPresentation() {
+        if (document.fullscreenElement) {
+            document.exitFullscreen();
+        }
+        showView('editor');
+        presenterSlideHistory = [];
+    }
+
+    function presenterNavigateToSlide(slideId, isHotspotClick = false) {
+        const targetIndex = currentPresentation.slides.findIndex(s => s.id === slideId);
+        if (targetIndex !== -1) {
+            if (isHotspotClick && presenterCurrentSlideIndex !== targetIndex) {
+                if (presenterSlideHistory[presenterSlideHistory.length -1] !== presenterCurrentSlideIndex) {
+                    presenterSlideHistory.push(presenterCurrentSlideIndex);
+                }
+            }
+            presenterCurrentSlideIndex = targetIndex;
+            renderCurrentSlideInPresenter();
+
+            const currentSlideData = currentPresentation.slides[presenterCurrentSlideIndex];
+            if (currentSlideData.speakerNotes) {
+                console.log(`Speaker Notes (Slide ${presenterCurrentSlideIndex + 1}):\n${currentSlideData.speakerNotes}`);
+            }
+        }
+    }
+
+    function presenterNextSlide() {
+        if (presenterCurrentSlideIndex < currentPresentation.slides.length - 1) {
+            presenterSlideHistory.push(presenterCurrentSlideIndex);
+            presenterCurrentSlideIndex++;
+            renderCurrentSlideInPresenter();
+        }
+    }
+
+    function presenterPrevSlide() {
+         if (presenterSlideHistory.length > 1) { 
+            presenterCurrentSlideIndex = presenterSlideHistory.pop();
+        } else if (presenterCurrentSlideIndex > 0) { 
+            presenterCurrentSlideIndex--;
+        } else {
+            return; 
+        }
+        renderCurrentSlideInPresenter();
+    }
+
+    async function renderCurrentSlideInPresenter() {
+        const slideData = currentPresentation.slides[presenterCurrentSlideIndex];
+        if (!slideData) return;
+
+        presenterSlideContent.innerHTML = ''; 
+        presenterSlideContainer.style.backgroundColor = slideData.backgroundColor || 'var(--slide-bg)';
+
+        presenterSlideContent.className = ''; 
+        void presenterSlideContent.offsetWidth; 
+        const transitionClass = currentPresentation.defaultTransition !== 'none' ? `slide-transition-${currentPresentation.defaultTransition}` : '';
+        if (transitionClass) {
+            presenterSlideContent.classList.add(transitionClass);
+        }
+
+        const logicalWidth = 1600;
+        const logicalHeight = 900;
+
+        const containerWidth = presenterSlideContainer.clientWidth;
+        const containerHeight = presenterSlideContainer.clientHeight;
+
+        const scaleX = containerWidth / logicalWidth;
+        const scaleY = containerHeight / logicalHeight;
+        const scale = Math.min(scaleX, scaleY);
+
+        presenterSlideContent.style.width = `${logicalWidth}px`;
+        presenterSlideContent.style.height = `${logicalHeight}px`;
+        presenterSlideContent.style.transform = `scale(${scale})`;
+
+        const offsetX = (containerWidth - logicalWidth * scale) / 2;
+        const offsetY = (containerHeight - logicalHeight * scale) / 2;
+        presenterSlideContent.style.left = `${offsetX}px`;
+        presenterSlideContent.style.top = `${offsetY}px`;
+
+
+        for (const el of slideData.elements) {
+            const elemDiv = document.createElement('div');
+            elemDiv.className = 'presenter-element ' + el.type + '-element';
+            elemDiv.style.left = (el.x / 100) * logicalWidth + 'px';
+            elemDiv.style.top = (el.y / 100) * logicalHeight + 'px';
+            elemDiv.style.width = (el.width / 100) * logicalWidth + 'px';
+            elemDiv.style.height = (el.height / 100) * logicalHeight + 'px';
+
+
+            switch (el.type) {
+                case 'text':
+                    elemDiv.textContent = el.content;
+                    elemDiv.style.fontSize = el.fontSize + 'px';
+                    elemDiv.style.color = el.color;
+                    elemDiv.style.display = 'flex'; 
+                    elemDiv.style.alignItems = 'center'; 
+                    elemDiv.style.justifyContent = 'center'; 
+                    break;
+                case 'image':
+                     if (el.assetId) {
+                        try {
+                            const assetBlob = await getAssetFromDB(el.assetId);
+                            const img = document.createElement('img');
+                            img.src = URL.createObjectURL(assetBlob);
+                            img.onload = () => URL.revokeObjectURL(img.src);
+                            elemDiv.appendChild(img);
+                        } catch (err) {
+                            elemDiv.textContent = 'Error loading image';
+                        }
+                    }
+                    break;
+                case 'shape':
+                    const svgNS = "http://www.w3.org/2000/svg";
+                    const svg = document.createElementNS(svgNS, "svg");
+                    svg.setAttribute("viewBox", "0 0 100 100");
+                    svg.style.setProperty('vector-effect', 'non-scaling-stroke', '');
+
+                    if (el.shapeType === 'rectangle') {
+                        const rect = document.createElementNS(svgNS, "rect");
+                        rect.setAttribute("x", "0"); rect.setAttribute("y", "0");
+                        rect.setAttribute("width", "100"); rect.setAttribute("height", "100");
+                        rect.setAttribute("fill", el.fillColor);
+                        rect.setAttribute("stroke", el.strokeColor);
+                        rect.setAttribute("stroke-width", "2"); 
+                        svg.appendChild(rect);
+                    }
+                    elemDiv.appendChild(svg);
+                    break;
+            }
+            presenterSlideContent.appendChild(elemDiv);
+        }
+
+        slideData.hotspots.forEach(hotspot => {
+            const hotspotDiv = document.createElement('div');
+            hotspotDiv.className = 'presenter-hotspot';
+            hotspotDiv.style.left = (hotspot.x / 100) * logicalWidth + 'px';
+            hotspotDiv.style.top = (hotspot.y / 100) * logicalHeight + 'px';
+            hotspotDiv.style.width = (hotspot.width / 100) * logicalWidth + 'px';
+            hotspotDiv.style.height = (hotspot.height / 100) * logicalHeight + 'px';
+            hotspotDiv.dataset.targetSlideId = hotspot.targetSlideId;
+
+            hotspotDiv.addEventListener('click', () => {
+                presenterNavigateToSlide(hotspot.targetSlideId, true);
+            });
+            presenterSlideContent.appendChild(hotspotDiv);
+        });
+    }
+
+    function handlePresenterKeyDown(event) {
+        if (presenterView.classList.contains('hidden')) return; 
+
+        switch (event.key) {
+            case 'ArrowRight':
+            case 'PageDown':
+            case ' ': 
+                presenterNextSlide();
+                break;
+            case 'ArrowLeft':
+            case 'PageUp':
+                presenterPrevSlide();
+                break;
+            case 'Escape':
+                exitPresentation();
+                break;
+            case 'b': 
+                 if (presenterSlideHistory.length > 1) {
+                    const prevHistoricalIndex = presenterSlideHistory.pop();
+                    presenterCurrentSlideIndex = prevHistoricalIndex;
+                    renderCurrentSlideInPresenter();
+                }
+                break;
+        }
+    }
+
+
+    // --- Event Listeners ---
+    function setupEventListeners() {
+        appName.addEventListener('click', closeCurrentPresentation);
+        createPresentationBtn.addEventListener('click', createNewPresentation);
+        importFileBtn.addEventListener('click', () => importFileInput.click());
+        importFileInput.addEventListener('change', importPresentation);
+
+        savePresentationBtn.addEventListener('click', saveCurrentPresentation);
+        exportPresentationBtn.addEventListener('click', exportPresentation);
+        presentBtn.addEventListener('click', startPresentation);
+        closePresentationBtn.addEventListener('click', closeCurrentPresentation);
+
+        addSlideBtn.addEventListener('click', () => addNewSlide(true));
+        addTextBtn.addEventListener('click', () => addElementToSlide('text'));
+        addImageBtn.addEventListener('click', () => imageUploadInput.click());
+        imageUploadInput.addEventListener('change', handleImageUpload);
+        addShapeBtn.addEventListener('click', () => addElementToSlide('shape'));
+        addHotspotBtn.addEventListener('click', toggleHotspotDrawMode);
+        deleteElementBtn.addEventListener('click', deleteSelectedElement);
+
+        themeSelector.addEventListener('change', (e) => applyTheme(e.target.value));
+        transitionSelector.addEventListener('change', (e) => {
+            if (currentPresentation) {
+                currentPresentation.defaultTransition = e.target.value;
+            }
+        });
+
+        [elemX, elemY, elemWidth, elemHeight, elemFontSize, elemColor].forEach(input => {
+            input.addEventListener('input', updateElementProperties);
+            input.addEventListener('change', updateElementProperties); 
+        });
+        elemTextContent.addEventListener('input', updateElementProperties);
+        [elemShapeFillColor, elemShapeStrokeColor].forEach(input => {
+            input.addEventListener('change', updateElementProperties);
+        });
+
+
+        hotspotLinkTargetSelect.addEventListener('change', updateHotspotProperties);
+        deleteHotspotBtn.addEventListener('click', deleteSelectedHotspot);
+
+        slideBgColorInput.addEventListener('change', updateSlideProperties);
+
+        speakerNotesTextarea.addEventListener('blur', saveSpeakerNotes); 
+
+        slideCanvas.addEventListener('mousedown', handleSlideCanvasMouseDown); // For hotspot drawing start
+        // Note: mousemove and mouseup for hotspot drawing are on slideCanvas itself
+        // while element dragging uses document listeners.
+        slideCanvas.addEventListener('mousemove', handleSlideCanvasMouseMove); // For hotspot drawing
+        slideCanvas.addEventListener('mouseup', handleSlideCanvasMouseUp);     // For hotspot drawing end
+        
+        slideCanvas.addEventListener('click', (e) => { 
+            if (e.target === slideCanvas && !isDrawingHotspot && !draggedElementInfo) {
+                selectedElementId = null;
+                selectedHotspotId = null;
+                renderCurrentSlideInEditor();
+                updatePropertiesPanelVisibility();
+            }
+        });
+
+        document.addEventListener('keydown', handlePresenterKeyDown);
+        window.addEventListener('resize', () => { 
+            if (!presenterView.classList.contains('hidden')) {
+                renderCurrentSlideInPresenter();
+            }
+        });
+    }
+
+
+    // --- Initialization ---
+    async function initializeApp() {
+        try {
+            await initDB();
+            refreshPresentationList();
+            showView('list');
+            setupEventListeners();
+            applyTheme('default'); 
+        } catch (error) {
+            console.error("Failed to initialize the application:", error);
+            document.body.innerHTML = `<div style="color:white; padding:20px;">
+                <h1>Error Initializing PathPresenter</h1>
+                <p>There was an issue setting up the application. This might be due to your browser's IndexedDB support or other local storage issues.</p>
+                <p>Details: ${error.message || error}</p>
+                <p>Please try clearing your browser cache/data for this site or using a modern browser (Chrome, Firefox, Edge, Safari).</p>
+            </div>`;
+        }
+    }
+
+    initializeApp();
+
+})();
+</script>
+</body>
+</html>

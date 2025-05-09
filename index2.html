@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PathPresenter Interactive</title>
+    <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --text-color: #e0e0e0;
+            --accent-color: #0f3460;
+            --secondary-accent: #e94560;
+            --border-color: #3e2c41;
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        header {
+            background-color: var(--accent-color);
+            color: var(--text-color);
+            padding: 10px 20px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+            z-index: 100;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.8em;
+        }
+
+        .container {
+            flex-grow: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 250px;
+            background-color: var(--accent-color);
+            color: var(--text-color);
+            padding: 15px;
+            overflow-y: auto;
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 50;
+        }
+
+        .sidebar button {
+            background-color: var(--secondary-accent);
+            color: var(--text-color);
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        .sidebar button:hover {
+            background-color: #c73550;
+        }
+
+        .slide-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+
+        .slide-list li {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            margin-bottom: 5px;
+            padding: 10px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .slide-list li:hover {
+            background-color: #2a2a4a;
+        }
+
+        .slide-list li.active {
+            background-color: var(--secondary-accent);
+            border-color: var(--secondary-accent);
+        }
+
+        .slide-list li span {
+            flex-grow: 1;
+            margin-right: 10px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .slide-list li .delete-slide {
+            background: none;
+            border: none;
+            color: var(--text-color);
+            cursor: pointer;
+            font-size: 1.2em;
+            padding: 0 5px;
+        }
+
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .editor-area {
+            flex-grow: 1;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .slide-preview {
+            width: 100%;
+            height: 100%;
+            background-color: #fff; /* White background for preview */
+            color: #000; /* Black text for preview */
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .slide-preview .slide-element {
+            position: absolute;
+            cursor: grab; /* Indicate draggable */
+            box-sizing: border-box;
+        }
+
+        .slide-preview .slide-element:active {
+             cursor: grabbing;
+        }
+
+        .slide-preview .slide-element.selected {
+            outline: 2px dashed blue; /* Indicate selected element */
+        }
+
+
+        .slide-preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .slide-preview .hotspot {
+            position: absolute;
+            border: 2px dashed var(--secondary-accent);
+            cursor: pointer;
+            background-color: rgba(233, 69, 96, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-color);
+            font-size: 0.8em;
+            text-align: center;
+            overflow: hidden;
+        }
+
+        .slide-preview .hotspot:hover {
+            background-color: rgba(233, 69, 96, 0.6);
+        }
+
+        .hotspot-editor {
+            position: absolute;
+            background-color: var(--accent-color);
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 10;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+            display: none; /* Hidden by default */
+        }
+
+        .hotspot-editor select {
+            margin-bottom: 10px;
+            padding: 5px;
+            border-radius: 3px;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        .hotspot-editor button {
+            background-color: var(--secondary-accent);
+            color: var(--text-color);
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 3px;
+            transition: background-color 0.3s ease;
+        }
+
+        .hotspot-editor button:hover {
+            background-color: #c73550;
+        }
+
+        .slide-controls {
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .slide-controls button,
+        .slide-controls input[type="file"] {
+            background-color: var(--secondary-accent);
+            color: var(--text-color);
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        .slide-controls button:hover {
+            background-color: #c73550;
+        }
+
+        .slide-controls input[type="file"] {
+            display: none; /* Hide default file input */
+        }
+
+        .slide-controls label {
+            background-color: var(--secondary-accent);
+            color: var(--text-color);
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .slide-controls label:hover {
+            background-color: #c73550;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 5px;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            resize: vertical;
+        }
+
+        .speaker-notes {
+            margin-top: 20px;
+        }
+
+        .speaker-notes h3 {
+            margin-top: 0;
+            color: var(--text-color);
+        }
+
+        .presentation-mode {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            overflow: hidden;
+			display:none;
+        }
+
+        .presentation-slide {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            box-sizing: border-box;
+            position: relative;
+            transition: opacity 0.5s ease; /* Basic transition */
+        }
+
+        .presentation-slide.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .presentation-slide .slide-element {
+             position: absolute;
+             /* No cursor change in presentation mode */
+        }
+
+        .presentation-slide img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .presentation-slide .hotspot {
+            position: absolute;
+            cursor: pointer;
+            /* No visible border in presentation mode */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: transparent; /* Hide text in presentation mode */
+            font-size: 0.8em;
+            text-align: center;
+            overflow: hidden;
+        }
+
+        .presentation-slide .hotspot:hover {
+            outline: 2px dashed rgba(255, 255, 255, 0.5); /* Subtle hover effect */
+        }
+
+        .presentation-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 1001;
+        }
+
+        .presentation-controls button {
+            background-color: rgba(0, 0, 0, 0.5);
+            color: var(--text-color);
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .presentation-controls button:hover {
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.6);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--bg-color);
+            margin: auto;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            width: 80%;
+            max-width: 500px;
+            border-radius: 8px;
+            color: var(--text-color);
+        }
+
+        .modal-content h2 {
+            margin-top: 0;
+            color: var(--text-color);
+        }
+
+        .modal-content button {
+            background-color: var(--secondary-accent);
+            color: var(--text-color);
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background-color 0.3s ease;
+        }
+
+        .modal-content button:hover {
+            background-color: #c73550;
+        }
+
+        .modal-content textarea {
+            width: calc(100% - 20px);
+            min-height: 150px;
+            margin-bottom: 10px;
+        }
+
+        .modal-content input[type="file"] {
+            margin-bottom: 10px;
+        }
+
+        .modal-content label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--text-color);
+        }
+
+        .close-button {
+            color: var(--text-color);
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close-button:hover,
+        .close-button:focus {
+            color: #aaa;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+                flex-direction: row;
+                overflow-x: auto;
+                overflow-y: hidden;
+                padding: 10px;
+            }
+
+            .sidebar button {
+                flex-shrink: 0;
+            }
+
+            .slide-list {
+                display: flex;
+                flex-direction: row;
+                gap: 5px;
+                flex-grow: 0;
+            }
+
+            .slide-list li {
+                flex-shrink: 0;
+                width: 100px; /* Fixed width for mobile slide previews */
+                height: 60px;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                font-size: 0.8em;
+                text-align: center;
+            }
+
+            .slide-list li span {
+                white-space: normal;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+            }
+
+            .slide-list li .delete-slide {
+                position: absolute;
+                top: 5px;
+                right: 5px;
+                font-size: 1em;
+            }
+
+            .main-content {
+                padding: 10px;
+            }
+
+            .editor-area {
+                padding: 10px;
+            }
+
+            .slide-controls {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>PathPresenter Interactive</h1>
+    </header>
+
+    <div class="container">
+        <aside class="sidebar">
+            <button id="add-slide-btn">Add Slide</button>
+            <ul id="slide-list" class="slide-list">
+                <!-- Slide items will be added here -->
+            </ul>
+            <button id="save-presentation-btn">Save Presentation</button>
+            <button id="load-presentation-btn">Load Presentation</button>
+            <button id="export-presentation-btn">Export Presentation</button>
+            <button id="start-presentation-btn">Start Presentation</button>
+        </aside>
+
+        <main class="main-content">
+            <div id="editor-area" class="editor-area">
+                <div id="slide-preview" class="slide-preview">
+                    <!-- Slide content preview goes here -->
+                </div>
+                <div id="hotspot-editor" class="hotspot-editor">
+                    <label for="hotspot-link-slide">Link to Slide:</label>
+                    <select id="hotspot-link-slide"></select>
+                    <button id="save-hotspot-link">Save Link</button>
+                    <button id="delete-hotspot">Delete Hotspot</button>
+                </div>
+            </div>
+
+            <div class="slide-controls">
+                <button id="add-text-btn">Add Text</button>
+                <input type="file" id="add-image-input" accept="image/*">
+                <label for="add-image-input">Add Image</label>
+                <button id="add-hotspot-btn">Add Hotspot</button>
+            </div>
+
+            <div class="speaker-notes">
+                <h3>Speaker Notes</h3>
+                <textarea id="speaker-notes-textarea" placeholder="Enter speaker notes for this slide..."></textarea>
+            </div>
+        </main>
+    </div>
+
+    <div id="presentation-mode" class="presentation-mode hidden">
+        <div id="presentation-slide-container" class="presentation-slide">
+            <!-- Presentation slide content goes here -->
+        </div>
+        <div class="presentation-controls">
+            <button id="exit-presentation-btn">Exit</button>
+            <!-- Navigation buttons could be added here if linear navigation is desired -->
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="load-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">×</span>
+            <h2>Load Presentation</h2>
+            <input type="file" id="load-file-input" accept=".json">
+            <button id="confirm-load-btn">Load</button>
+        </div>
+    </div>
+
+    <div id="export-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">×</span>
+            <h2>Export Presentation</h2>
+            <p>Copy the JSON data below or download the file.</p>
+            <textarea id="export-json-output" readonly></textarea>
+            <button id="download-export-btn">Download JSON</button>
+        </div>
+    </div>
+
+    <script>
+        const DB_NAME = 'PathPresenterDB';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'presentations';
+
+        let db;
+        let currentPresentation = {
+            id: 'default', // Use a default ID for the current working presentation
+            slides: []
+        };
+        let activeSlideIndex = -1;
+        let isAddingHotspot = false;
+        let currentHotspot = null; // The hotspot element being edited
+
+        // Dragging variables
+        let isDragging = false;
+        let activeElement = null;
+        let initialX;
+        let initialY;
+        let xOffset = 0;
+        let yOffset = 0;
+
+        const slideListEl = document.getElementById('slide-list');
+        const addSlideBtn = document.getElementById('add-slide-btn');
+        const editorAreaEl = document.getElementById('editor-area');
+        const slidePreviewEl = document.getElementById('slide-preview');
+        const addTextBtn = document.getElementById('add-text-btn');
+        const addImageInput = document.getElementById('add-image-input');
+        const addHotspotBtn = document.getElementById('add-hotspot-btn');
+        const speakerNotesTextarea = document.getElementById('speaker-notes-textarea');
+        const hotspotEditorEl = document.getElementById('hotspot-editor');
+        const hotspotLinkSlideSelect = document.getElementById('hotspot-link-slide');
+        const saveHotspotLinkBtn = document.getElementById('save-hotspot-link');
+        const deleteHotspotBtn = document.getElementById('delete-hotspot');
+        const savePresentationBtn = document.getElementById('save-presentation-btn');
+        const loadPresentationBtn = document.getElementById('load-presentation-btn');
+        const exportPresentationBtn = document.getElementById('export-presentation-btn');
+        const startPresentationBtn = document.getElementById('start-presentation-btn');
+        const presentationModeEl = document.getElementById('presentation-mode');
+        const presentationSlideContainerEl = document.getElementById('presentation-slide-container');
+        const exitPresentationBtn = document.getElementById('exit-presentation-btn');
+
+        // Modals
+        const loadModal = document.getElementById('load-modal');
+        const loadFileInput = document.getElementById('load-file-input');
+        const confirmLoadBtn = document.getElementById('confirm-load-btn');
+        const exportModal = document.getElementById('export-modal');
+        const exportJsonOutput = document.getElementById('export-json-output');
+        const downloadExportBtn = document.getElementById('download-export-btn');
+        const closeButtons = document.querySelectorAll('.close-button');
+
+        // IndexedDB Setup
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+                request.onupgradeneeded = (event) => {
+                    db = event.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                    }
+                };
+
+                request.onsuccess = (event) => {
+                    db = event.target.result;
+                    console.log('IndexedDB opened successfully');
+                    resolve(db);
+                };
+
+                request.onerror = (event) => {
+                    console.error('IndexedDB error:', event.target.errorCode);
+                    reject(event.target.errorCode);
+                };
+            });
+        }
+
+        function saveData(data) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.put(data);
+
+                request.onsuccess = () => {
+                    console.log('Data saved to IndexedDB');
+                    resolve();
+                };
+
+                request.onerror = (event) => {
+                    console.error('Error saving data:', event.target.errorCode);
+                    reject(event.target.errorCode);
+                };
+            });
+        }
+
+        function loadData(id) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], 'readonly');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.get(id);
+
+                request.onsuccess = (event) => {
+                    console.log('Data loaded from IndexedDB');
+                    resolve(event.target.result);
+                };
+
+                request.onerror = (event) => {
+                    console.error('Error loading data:', event.target.errorCode);
+                    reject(event.target.errorCode);
+                };
+            });
+        }
+
+        // Presentation Management
+        function renderSlideList() {
+            slideListEl.innerHTML = '';
+            currentPresentation.slides.forEach((slide, index) => {
+                const li = document.createElement('li');
+                li.dataset.index = index;
+                li.innerHTML = `<span>Slide ${index + 1}</span> <button class="delete-slide">×</button>`;
+                if (index === activeSlideIndex) {
+                    li.classList.add('active');
+                }
+                li.addEventListener('click', (event) => {
+                    if (!event.target.classList.contains('delete-slide')) {
+                        selectSlide(index);
+                    }
+                });
+                li.querySelector('.delete-slide').addEventListener('click', (event) => {
+                    event.stopPropagation(); // Prevent selecting the slide
+                    deleteSlide(index);
+                });
+                slideListEl.appendChild(li);
+            });
+        }
+
+        function addSlide() {
+            const newSlide = {
+                id: `slide-${Date.now()}`,
+                content: [], // Array of content objects {id: '...', type: 'text'/'image'/'shape', value: ..., style: {...}}
+                hotspots: [], // Array of hotspot objects {id: 'hotspot-...', rect: {x, y, width, height}, linkTo: 'slide-id'}
+                notes: ''
+            };
+            currentPresentation.slides.push(newSlide);
+            renderSlideList();
+            selectSlide(currentPresentation.slides.length - 1);
+            saveCurrentPresentation();
+        }
+
+        function deleteSlide(index) {
+            if (confirm(`Are you sure you want to delete Slide ${index + 1}?`)) {
+                const deletedSlideId = currentPresentation.slides[index].id;
+                currentPresentation.slides.splice(index, 1);
+
+                // Remove any hotspots linking to the deleted slide
+                currentPresentation.slides.forEach(slide => {
+                    slide.hotspots = slide.hotspots.filter(hotspot => hotspot.linkTo !== deletedSlideId);
+                });
+
+                renderSlideList();
+                if (currentPresentation.slides.length > 0) {
+                    selectSlide(Math.max(0, index - 1));
+                } else {
+                    activeSlideIndex = -1;
+                    clearEditor();
+                }
+                saveCurrentPresentation();
+            }
+        }
+
+        function selectSlide(index) {
+            if (activeSlideIndex !== -1) {
+                // Save current slide data before switching
+                saveCurrentSlideContent();
+            }
+
+            activeSlideIndex = index;
+            renderEditor();
+            populateHotspotLinkOptions();
+        }
+
+        function clearEditor() {
+            slidePreviewEl.innerHTML = '';
+            speakerNotesTextarea.value = '';
+            hotspotEditorEl.style.display = 'none';
+            isAddingHotspot = false;
+            addHotspotBtn.textContent = 'Add Hotspot';
+            currentHotspot = null;
+            activeElement = null; // Clear active element
+        }
+
+        function renderEditor() {
+            clearEditor();
+            if (activeSlideIndex === -1) return;
+
+            const slide = currentPresentation.slides[activeSlideIndex];
+            speakerNotesTextarea.value = slide.notes;
+
+            slide.content.forEach(item => {
+                if (item.type === 'text') {
+                    const textEl = document.createElement('div');
+                    textEl.classList.add('slide-element');
+                    textEl.dataset.elementId = item.id;
+                    textEl.textContent = item.value;
+                    Object.assign(textEl.style, item.style);
+                    setupDraggable(textEl);
+                    slidePreviewEl.appendChild(textEl);
+                } else if (item.type === 'image') {
+                    const imgEl = document.createElement('img');
+                    imgEl.classList.add('slide-element');
+                    imgEl.dataset.elementId = item.id;
+                    imgEl.src = item.value; // Assuming value is a data URL
+                    Object.assign(imgEl.style, item.style);
+                     // Ensure image style includes position: absolute
+                    if (!imgEl.style.position || imgEl.style.position === 'static') {
+                         imgEl.style.position = 'absolute';
+                    }
+                    setupDraggable(imgEl);
+                    slidePreviewEl.appendChild(imgEl);
+                }
+                // Add rendering for other content types (shapes) here
+            });
+
+            slide.hotspots.forEach(hotspot => {
+                createHotspotElement(hotspot);
+            });
+        }
+
+        function saveCurrentSlideContent() {
+            if (activeSlideIndex === -1) return;
+
+            const slide = currentPresentation.slides[activeSlideIndex];
+            slide.notes = speakerNotesTextarea.value;
+
+            // Save content elements
+            slide.content = [];
+            slidePreviewEl.querySelectorAll('.slide-element').forEach(elementEl => {
+                const elementId = elementEl.dataset.elementId;
+                const elementType = elementEl.tagName === 'IMG' ? 'image' : 'text'; // Basic type detection
+                const elementValue = elementType === 'image' ? elementEl.src : elementEl.textContent;
+
+                // Get current style properties
+                const style = {
+                    position: elementEl.style.position,
+                    left: elementEl.style.left,
+                    top: elementEl.style.top,
+                    width: elementEl.style.width,
+                    height: elementEl.style.height,
+                    transform: elementEl.style.transform, // Save transform for centering
+                    // Add other relevant styles you want to save (color, font-size, etc.)
+                    color: elementEl.style.color,
+                    fontSize: elementEl.style.fontSize,
+                    textAlign: elementEl.style.textAlign,
+                    maxWidth: elementEl.style.maxWidth,
+                    maxHeight: elementEl.style.maxHeight,
+                };
+
+                slide.content.push({
+                    id: elementId,
+                    type: elementType,
+                    value: elementValue,
+                    style: style
+                });
+            });
+
+
+            // Save hotspots
+            slide.hotspots = [];
+            slidePreviewEl.querySelectorAll('.hotspot').forEach(hotspotEl => {
+                slide.hotspots.push({
+                    id: hotspotEl.dataset.hotspotId,
+                    rect: {
+                        x: parseFloat(hotspotEl.style.left),
+                        y: parseFloat(hotspotEl.style.top),
+                        width: parseFloat(hotspotEl.style.width),
+                        height: parseFloat(hotspotEl.style.height)
+                    },
+                    linkTo: hotspotEl.dataset.linkTo || ''
+                });
+            });
+
+            saveCurrentPresentation();
+        }
+
+        function addTextToSlide() {
+            if (activeSlideIndex === -1) {
+                alert('Please select or add a slide first.');
+                return;
+            }
+            const text = prompt('Enter text for the slide:');
+            if (text) {
+                const textEl = document.createElement('div');
+                textEl.classList.add('slide-element');
+                textEl.dataset.elementId = `element-${Date.now()}`;
+                textEl.textContent = text;
+                // Basic styling - could be expanded
+                textEl.style.position = 'absolute';
+                textEl.style.left = '50%';
+                textEl.style.top = '50%';
+                textEl.style.transform = 'translate(-50%, -50%)'; // Center initially
+                textEl.style.color = '#000'; // Default text color in preview
+                textEl.style.fontSize = '1.5em';
+                textEl.style.textAlign = 'center';
+                textEl.style.whiteSpace = 'pre-wrap'; // Allow line breaks from prompt
+                textEl.style.wordBreak = 'break-word'; // Prevent overflow
+                setupDraggable(textEl);
+                slidePreviewEl.appendChild(textEl);
+                saveCurrentSlideContent(); // Save the new element
+            }
+        }
+
+        async function addImageToSlide(event) {
+            if (activeSlideIndex === -1) {
+                alert('Please select or add a slide first.');
+                return;
+            }
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const imgEl = document.createElement('img');
+                    imgEl.classList.add('slide-element');
+                    imgEl.dataset.elementId = `element-${Date.now()}`;
+                    imgEl.src = e.target.result;
+                    imgEl.style.position = 'absolute';
+                    imgEl.style.left = '50%';
+                    imgEl.style.top = '50%';
+                    imgEl.style.transform = 'translate(-50%, -50%)'; // Center initially
+                    imgEl.style.maxWidth = '80%';
+                    imgEl.style.maxHeight = '80%';
+                    setupDraggable(imgEl);
+                    slidePreviewEl.appendChild(imgEl);
+                    saveCurrentSlideContent(); // Save the new element
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function startAddingHotspot() {
+            if (activeSlideIndex === -1) {
+                alert('Please select or add a slide first.');
+                return;
+            }
+            isAddingHotspot = true;
+            editorAreaEl.style.cursor = 'crosshair';
+            addHotspotBtn.textContent = 'Cancel Hotspot';
+        }
+
+        function cancelAddingHotspot() {
+            isAddingHotspot = false;
+            editorAreaEl.style.cursor = 'default';
+            addHotspotBtn.textContent = 'Add Hotspot';
+        }
+
+        function createHotspotElement(hotspotData) {
+            const hotspotEl = document.createElement('div');
+            hotspotEl.classList.add('hotspot');
+            hotspotEl.dataset.hotspotId = hotspotData.id || `hotspot-${Date.now()}`;
+            hotspotEl.dataset.linkTo = hotspotData.linkTo || '';
+            hotspotEl.style.left = `${hotspotData.rect.x}%`;
+            hotspotEl.style.top = `${hotspotData.rect.y}%`;
+            hotspotEl.style.width = `${hotspotData.rect.width}%`;
+            hotspotEl.style.height = `${hotspotData.rect.height}%`;
+            hotspotEl.textContent = hotspotData.linkTo ? `Link to Slide ${currentPresentation.slides.findIndex(s => s.id === hotspotData.linkTo) + 1}` : 'No Link';
+
+            hotspotEl.addEventListener('click', (event) => {
+                event.stopPropagation(); // Prevent clicking the slide preview
+                editHotspot(hotspotEl);
+            });
+
+            slidePreviewEl.appendChild(hotspotEl);
+            return hotspotEl;
+        }
+
+        function editHotspot(hotspotEl) {
+            currentHotspot = hotspotEl;
+            hotspotEditorEl.style.display = 'block';
+            // Position the editor near the hotspot
+            const rect = hotspotEl.getBoundingClientRect();
+            const previewRect = slidePreviewEl.getBoundingClientRect();
+            hotspotEditorEl.style.left = `${rect.right - previewRect.left + 10}px`;
+            hotspotEditorEl.style.top = `${rect.top - previewRect.top}px`;
+
+
+            populateHotspotLinkOptions();
+            hotspotLinkSlideSelect.value = hotspotEl.dataset.linkTo || '';
+        }
+
+        function populateHotspotLinkOptions() {
+            hotspotLinkSlideSelect.innerHTML = '<option value="">-- Select Slide --</option>';
+            currentPresentation.slides.forEach((slide, index) => {
+                if (index !== activeSlideIndex) { // Don't allow linking to the same slide
+                    const option = document.createElement('option');
+                    option.value = slide.id;
+                    option.textContent = `Slide ${index + 1}`;
+                    hotspotLinkSlideSelect.appendChild(option);
+                }
+            });
+        }
+
+        function saveHotspotLink() {
+            if (currentHotspot) {
+                const selectedSlideId = hotspotLinkSlideSelect.value;
+                currentHotspot.dataset.linkTo = selectedSlideId;
+                const linkedSlideIndex = currentPresentation.slides.findIndex(s => s.id === selectedSlideId);
+                currentHotspot.textContent = selectedSlideId ? `Link to Slide ${linkedSlideIndex + 1}` : 'No Link';
+                hotspotEditorEl.style.display = 'none';
+                currentHotspot = null;
+                saveCurrentSlideContent(); // Save the updated hotspot data
+            }
+        }
+
+        function deleteSelectedHotspot() {
+            if (currentHotspot && confirm('Are you sure you want to delete this hotspot?')) {
+                currentHotspot.remove();
+                hotspotEditorEl.style.display = 'none';
+                currentHotspot = null;
+                saveCurrentSlideContent(); // Save the updated hotspot data
+            }
+        }
+
+        // Dragging Functionality
+        function setupDraggable(element) {
+            element.addEventListener('mousedown', dragStart);
+            element.addEventListener('touchstart', dragStart); // For touch devices
+        }
+
+        function dragStart(event) {
+            if (isAddingHotspot) return; // Don't drag if adding hotspot
+
+            // Prevent dragging hotspots
+            if (event.target.classList.contains('hotspot')) return;
+
+            // Find the actual slide element (could be the target or a parent)
+            let targetElement = event.target;
+            while (targetElement && !targetElement.classList.contains('slide-element')) {
+                targetElement = targetElement.parentElement;
+            }
+
+            if (!targetElement) return; // Not a draggable element
+
+            activeElement = targetElement;
+            isDragging = true;
+
+            // Add a class to indicate dragging/selection
+            activeElement.classList.add('selected');
+
+            if (event.type === "touchstart") {
+                initialX = event.touches[0].clientX - xOffset;
+                initialY = event.touches[0].clientY - yOffset;
+            } else {
+                initialX = event.clientX - xOffset;
+                initialY = event.clientY - yOffset;
+            }
+
+            // Calculate offset based on the element's current position
+            const rect = activeElement.getBoundingClientRect();
+            const previewRect = slidePreviewEl.getBoundingClientRect();
+            xOffset = event.clientX - rect.left;
+            yOffset = event.clientY - rect.top;
+
+            // Add event listeners to the document to handle dragging outside the element
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', dragEnd);
+            document.addEventListener('touchmove', drag);
+            document.addEventListener('touchend', dragEnd);
+
+             // Hide hotspot editor if open
+            hotspotEditorEl.style.display = 'none';
+            currentHotspot = null;
+        }
+
+        function drag(event) {
+            if (!isDragging || !activeElement) return;
+
+            event.preventDefault(); // Prevent default browser drag behavior
+
+            let currentX;
+            let currentY;
+
+            if (event.type === "touchmove") {
+                currentX = event.touches[0].clientX - initialX;
+                currentY = event.touches[0].clientY - initialY;
+            } else {
+                currentX = event.clientX - initialX;
+                currentY = event.clientY - initialY;
+            }
+
+            // Calculate new position relative to the slide preview
+            const previewRect = slidePreviewEl.getBoundingClientRect();
+            const newLeftPx = event.clientX - previewRect.left - xOffset;
+            const newTopPx = event.clientY - previewRect.top - yOffset;
+
+            // Update element position using pixels first
+            activeElement.style.left = `${newLeftPx}px`;
+            activeElement.style.top = `${newTopPx}px`;
+
+            // Remove any centering transform if it exists
+            activeElement.style.transform = 'none';
+        }
+
+        function dragEnd(event) {
+            if (!isDragging || !activeElement) return;
+
+            isDragging = false;
+
+            // Remove the selected class
+            activeElement.classList.remove('selected');
+
+            // Remove event listeners
+            document.removeEventListener('mousemove', drag);
+            document.removeEventListener('mouseup', dragEnd);
+            document.removeEventListener('touchmove', drag);
+            document.removeEventListener('touchend', dragEnd);
+
+            // Convert final pixel position to percentage for responsiveness
+            const previewRect = slidePreviewEl.getBoundingClientRect();
+            const finalLeftPx = parseFloat(activeElement.style.left);
+            const finalTopPx = parseFloat(activeElement.style.top);
+
+            const finalLeftPercent = (finalLeftPx / previewRect.width) * 100;
+            const finalTopPercent = (finalTopPx / previewRect.height) * 100;
+
+            activeElement.style.left = `${finalLeftPercent}%`;
+            activeElement.style.top = `${finalTopPercent}%`;
+
+            activeElement = null; // Clear active element
+            xOffset = 0;
+            yOffset = 0;
+
+            saveCurrentSlideContent(); // Save the new position
+        }
+
+
+        // Event Listeners for Editor Area (Hotspot Drawing)
+        editorAreaEl.addEventListener('mousedown', (event) => {
+            if (!isAddingHotspot || event.target !== slidePreviewEl) return;
+
+            const previewRect = slidePreviewEl.getBoundingClientRect();
+            const startX = event.clientX - previewRect.left;
+            const startY = event.clientY - previewRect.top;
+
+            const tempHotspot = document.createElement('div');
+            tempHotspot.classList.add('hotspot');
+            tempHotspot.style.position = 'absolute';
+            tempHotspot.style.left = `${startX}px`;
+            tempHotspot.style.top = `${startY}px`;
+            tempHotspot.style.width = '0';
+            tempHotspot.style.height = '0';
+            tempHotspot.style.border = '2px dashed blue'; // Different color for drawing
+            tempHotspot.style.backgroundColor = 'rgba(0, 0, 255, 0.3)';
+            slidePreviewEl.appendChild(tempHotspot);
+
+            const onMouseMove = (moveEvent) => {
+                const currentX = moveEvent.clientX - previewRect.left;
+                const currentY = moveEvent.clientY - previewRect.top;
+
+                const width = Math.abs(currentX - startX);
+                const height = Math.abs(currentY - startY);
+                const left = Math.min(startX, currentX);
+                const top = Math.min(startY, currentY);
+
+                tempHotspot.style.left = `${left}px`;
+                tempHotspot.style.top = `${top}px`;
+                tempHotspot.style.width = `${width}px`;
+                tempHotspot.style.height = `${height}px`;
+            };
+
+            const onMouseUp = (upEvent) => {
+                editorAreaEl.removeEventListener('mousemove', onMouseMove);
+                editorAreaEl.removeEventListener('mouseup', onMouseUp);
+
+                const rect = tempHotspot.getBoundingClientRect();
+                // const previewRect = slidePreviewEl.getBoundingClientRect(); // Already defined
+
+                // Calculate percentage-based position and size
+                const x = ((rect.left - previewRect.left) / previewRect.width) * 100;
+                const y = ((rect.top - previewRect.top) / previewRect.height) * 100;
+                const width = (rect.width / previewRect.width) * 100;
+                const height = (rect.height / previewRect.height) * 100;
+
+                tempHotspot.remove(); // Remove the temporary element
+
+                if (width > 1 && height > 1) { // Only create if it's a reasonable size
+                    const newHotspotData = {
+                        id: `hotspot-${Date.now()}`,
+                        rect: { x, y, width, height },
+                        linkTo: ''
+                    };
+                    const newHotspotEl = createHotspotElement(newHotspotData);
+                    editHotspot(newHotspotEl); // Immediately open editor for the new hotspot
+                }
+
+                cancelAddingHotspot();
+            };
+
+            editorAreaEl.addEventListener('mousemove', onMouseMove);
+            editorAreaEl.addEventListener('mouseup', onMouseUp);
+        });
+
+
+        // Save/Load/Export
+        async function saveCurrentPresentation() {
+            if (activeSlideIndex !== -1) {
+                 saveCurrentSlideContent(); // Ensure current slide is saved before saving the whole presentation
+            }
+            await saveData(currentPresentation);
+        }
+
+        async function loadPresentation(presentationData) {
+            if (presentationData) {
+                currentPresentation = presentationData;
+                renderSlideList();
+                if (currentPresentation.slides.length > 0) {
+                    selectSlide(0);
+                } else {
+                    activeSlideIndex = -1;
+                    clearEditor();
+                }
+                console.log('Presentation loaded:', currentPresentation);
+            } else {
+                console.log('No presentation found in IndexedDB, starting fresh.');
+                currentPresentation = { id: 'default', slides: [] };
+                renderSlideList();
+                activeSlideIndex = -1;
+                clearEditor();
+            }
+        }
+
+        async function handleLoadButtonClick() {
+            loadModal.style.display = 'flex';
+        }
+
+        async function handleConfirmLoad() {
+            const file = loadFileInput.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    try {
+                        const loadedData = JSON.parse(e.target.result);
+                        if (loadedData && loadedData.id && Array.isArray(loadedData.slides)) {
+                            // Assign a new ID to the loaded presentation to avoid overwriting the default
+                            loadedData.id = `loaded-${Date.now()}`;
+                            await loadPresentation(loadedData);
+                            alert('Presentation loaded successfully!');
+                            loadModal.style.display = 'none';
+                        } else {
+                            alert('Invalid presentation file format.');
+                        }
+                    } catch (error) {
+                        alert('Error parsing presentation file.');
+                        console.error(error);
+                    }
+                };
+                reader.readAsText(file);
+            } else {
+                alert('Please select a file to load.');
+            }
+        }
+
+        async function handleExportButtonClick() {
+             if (activeSlideIndex !== -1) {
+                 saveCurrentSlideContent(); // Ensure current slide is saved before exporting
+            }
+            const presentationJson = JSON.stringify(currentPresentation, null, 2);
+            exportJsonOutput.value = presentationJson;
+            exportModal.style.display = 'flex';
+        }
+
+        function handleDownloadExport() {
+            const presentationJson = exportJsonOutput.value;
+            const blob = new Blob([presentationJson], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'presentation.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Presentation Mode
+        let currentPresentationSlideIndex = 0;
+
+        function startPresentation() {
+            if (currentPresentation.slides.length === 0) {
+                alert('Add some slides before starting the presentation!');
+                return;
+            }
+             if (activeSlideIndex !== -1) {
+                 saveCurrentSlideContent(); // Ensure current slide is saved before presenting
+            }
+            currentPresentationSlideIndex = 0;
+            renderPresentationSlide(currentPresentationSlideIndex);
+            presentationModeEl.classList.remove('hidden');
+            document.body.style.overflow = 'hidden'; // Hide scrollbars
+        }
+
+        function renderPresentationSlide(index) {
+            presentationSlideContainerEl.innerHTML = '';
+            const slide = currentPresentation.slides[index];
+
+            // Render content
+            slide.content.forEach(item => {
+                 if (item.type === 'text') {
+                    const textEl = document.createElement('div');
+                    textEl.classList.add('slide-element'); // Use the same class for consistency
+                    textEl.textContent = item.value;
+                    Object.assign(textEl.style, item.style);
+                    presentationSlideContainerEl.appendChild(textEl);
+                } else if (item.type === 'image') {
+                    const imgEl = document.createElement('img');
+                    imgEl.classList.add('slide-element'); // Use the same class for consistency
+                    imgEl.src = item.value; // Assuming value is a data URL
+                    Object.assign(imgEl.style, item.style);
+                    presentationSlideContainerEl.appendChild(imgEl);
+                }
+            });
+
+            // Render hotspots
+            slide.hotspots.forEach(hotspot => {
+                const hotspotEl = document.createElement('div');
+                hotspotEl.classList.add('hotspot');
+                hotspotEl.style.left = `${hotspot.rect.x}%`;
+                hotspotEl.style.top = `${hotspot.rect.y}%`;
+                hotspotEl.style.width = `${hotspot.rect.width}%`;
+                hotspotEl.style.height = `${hotspot.rect.height}%`;
+                hotspotEl.dataset.linkTo = hotspot.linkTo;
+
+                if (hotspot.linkTo) {
+                    hotspotEl.addEventListener('click', () => {
+                        const targetSlideIndex = currentPresentation.slides.findIndex(s => s.id === hotspot.linkTo);
+                        if (targetSlideIndex !== -1) {
+                            renderPresentationSlide(targetSlideIndex);
+                            currentPresentationSlideIndex = targetSlideIndex; // Update current index
+                        } else {
+                            console.warn(`Hotspot links to non-existent slide: ${hotspot.linkTo}`);
+                        }
+                    });
+                }
+                presentationSlideContainerEl.appendChild(hotspotEl);
+            });
+
+            // Basic transition effect
+            presentationSlideContainerEl.style.opacity = 0;
+            setTimeout(() => {
+                 presentationSlideContainerEl.style.opacity = 1;
+            }, 50); // Small delay for transition
+        }
+
+        function exitPresentation() {
+            presentationModeEl.classList.add('hidden');
+            document.body.style.overflow = 'auto'; // Restore scrollbars
+        }
+
+        // Event Listeners
+        addSlideBtn.addEventListener('click', addSlide);
+        addTextBtn.addEventListener('click', addTextToSlide);
+        addImageInput.addEventListener('change', addImageToSlide);
+        addHotspotBtn.addEventListener('click', () => {
+            if (isAddingHotspot) {
+                cancelAddingHotspot();
+            } else {
+                startAddingHotspot();
+            }
+        });
+        speakerNotesTextarea.addEventListener('input', saveCurrentSlideContent); // Save notes on input
+        saveHotspotLinkBtn.addEventListener('click', saveHotspotLink);
+        deleteHotspotBtn.addEventListener('click', deleteSelectedHotspot);
+        savePresentationBtn.addEventListener('click', saveCurrentPresentation);
+        loadPresentationBtn.addEventListener('click', handleLoadButtonClick);
+        confirmLoadBtn.addEventListener('click', handleConfirmLoad);
+        exportPresentationBtn.addEventListener('click', handleExportButtonClick);
+        downloadExportBtn.addEventListener('click', handleDownloadExport);
+        startPresentationBtn.addEventListener('click', startPresentation);
+        exitPresentationBtn.addEventListener('click', exitPresentation);
+
+        // Close modals
+        closeButtons.forEach(button => {
+            button.addEventListener('click', (event) => {
+                event.target.closest('.modal').style.display = 'none';
+            });
+        });
+
+        window.addEventListener('click', (event) => {
+            if (event.target === loadModal) {
+                loadModal.style.display = 'none';
+            }
+            if (event.target === exportModal) {
+                exportModal.style.display = 'none';
+            }
+        });
+
+
+        // Initialize
+        async function init() {
+            await openDB();
+            // Attempt to load the default presentation on startup
+            const savedPresentation = await loadData('default');
+            await loadPresentation(savedPresentation);
+        }
+
+        init();
+
+    </script>
+</body>
+</html>
